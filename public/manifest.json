@@ -1,0 +1,43 @@
+{
+  "name": "MSA University — Faculty of Biotechnology",
+  "short_name": "Biotech Portal",
+  "description": "Executive Academic Governance, 16 Faculty Hats & Staff Deliverables Portal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1d",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["education", "productivity", "management"],
+  "icons": [
+    {
+      "src": "/logos/faculty-of-biotechnology.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logos/faculty-of-biotechnology.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My Tasks",
+      "short_name": "Tasks",
+      "description": "View active task assignments & deadlines",
+      "url": "/?tab=tasks",
+      "icons": [{ "src": "/logos/faculty-of-biotechnology.jpeg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "description": "View monthly schedule & deadlines",
+      "url": "/?tab=calendar",
+      "icons": [{ "src": "/logos/faculty-of-biotechnology.jpeg", "sizes": "192x192" }]
+    }
+  ]
+}
