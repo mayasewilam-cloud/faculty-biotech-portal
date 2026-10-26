@@ -449,44 +449,53 @@ async function ensureInitialized(): Promise<void> {
     const disk = await loadStateFromDisk();
     if (disk) {
       if (Array.isArray(disk.tasks)) {
-        const existingTitles = new Set(disk.tasks.map((t: any) => t.title?.toLowerCase().trim()));
-        const missingFall2026 = FALL_2026_TASKS.filter(ft => !existingTitles.has(ft.title.toLowerCase().trim()));
-        const merged = disk.tasks.map((t: any) => {
-          const match = FALL_2026_TASKS.find(ft => ft.title.toLowerCase().trim() === t.title?.toLowerCase().trim());
-          if (match) {
+        // Discard legacy prototype mock tasks
+        const legacyMockTitles = new Set([
+          'submit naqaae accreditation course syllabi (bio301 & bio402)',
+          'dna sequencing lab safety audit & equipment log',
+          'week 4 lab attendance verification & student log',
+          'practical exam schedule publishing & lab prep',
+          'lecture hall reservation - 6th of october compensation sessions',
+          'newly hired teaching assistant evaluation form',
+          'newly hired staff laboratory tracker',
+          'upload the weekly plan and minutes of meeting- fall 2026',
+          'check tasks allocation - fall 2026',
+          'exam submission - level one & level two',
+          'the moderation committee for level one and level two',
+          'submission of special needs midterm and final exams with model answers',
+          'preparation of the monthly academic calendar',
+          'quality assurance awareness session for rubric design'
+        ]);
+
+        // Keep real user-added tasks (not in legacy mock and not in official seed)
+        const officialTitles = new Set(FALL_2026_TASKS.map(ft => ft.title.toLowerCase().trim()));
+        const userAddedTasks = disk.tasks.filter((t: any) => {
+          const title = (t.title || '').toLowerCase().trim();
+          return !legacyMockTitles.has(title) && !officialTitles.has(title);
+        });
+
+        // Merge disk updates for official tasks (e.g. status changes, notes, attachments)
+        const officialWithUpdates = FALL_2026_TASKS.map((ft: any) => {
+          const diskMatch = disk.tasks.find((dt: any) => dt.title?.toLowerCase().trim() === ft.title.toLowerCase().trim() || dt.id === ft.id);
+          if (diskMatch) {
             return {
-              ...match,
-              ...t,
-              tr: match.tr,
-              start_date: match.start_date,
-              due_time: match.due_time,
-              comment_type: match.comment_type,
-              received_by: match.received_by,
-              form_link: match.form_link,
-              submission_type: match.submission_type,
-              is_confidential: match.is_confidential
+              ...ft,
+              status: diskMatch.status || ft.status,
+              completion_notes: diskMatch.completion_notes || ft.completion_notes,
+              attachment_url: diskMatch.attachment_url || ft.attachment_url,
+              attachment_name: diskMatch.attachment_name || ft.attachment_name,
+              drive_link: diskMatch.drive_link || ft.drive_link,
+              action_plan: diskMatch.action_plan || ft.action_plan,
+              google_form_url: diskMatch.google_form_url || ft.google_form_url,
+              assigned_members: diskMatch.assigned_members || ft.assigned_members,
+              dean_acknowledged: diskMatch.dean_acknowledged ?? ft.dean_acknowledged,
             };
           }
-          return t;
+          return ft;
         });
-        const combined = [...merged, ...missingFall2026];
-        const taskMap = new Map<number, any>();
-        let highestId = 0;
-        for (const t of combined) {
-          const numId = Number(t.id) || 0;
-          if (numId > highestId) highestId = numId;
-        }
-        for (const t of combined) {
-          const numId = Number(t.id);
-          if (!numId || taskMap.has(numId)) {
-            highestId++;
-            t.id = highestId;
-          } else {
-            t.id = numId;
-          }
-          taskMap.set(t.id, t);
-        }
-        g.__memoryTasks = Array.from(taskMap.values());
+
+        // Combine: official Fall 2026 tasks + newly added tasks
+        g.__memoryTasks = [...officialWithUpdates, ...userAddedTasks];
       } else {
         g.__memoryTasks = FALL_2026_TASKS;
       }

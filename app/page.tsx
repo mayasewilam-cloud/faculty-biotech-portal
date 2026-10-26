@@ -282,7 +282,7 @@ export default function DashboardPage() {
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
 
   // Task Dispatch Form State (Supports Single, Hat Group, Multi-Selected, Department-wide, or Broadcast)
-  const [dispatchMode, setDispatchMode] = useState<'single' | 'committee' | 'hat' | 'selected' | 'department' | 'all'>('single');
+  const [dispatchMode, setDispatchMode] = useState<'single' | 'committee' | 'selected' | 'department' | 'all'>('single');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskCategory, setNewTaskCategory] = useState<string>('Schedules, Load & Faculty Board');
   const [newTaskGoogleFormUrl, setNewTaskGoogleFormUrl] = useState<string>('');
@@ -1025,8 +1025,6 @@ export default function DashboardPage() {
   };
 
   const handleQuickDispatchToHat = (hat: Hat) => {
-    setTargetHatId(hat.id);
-    setDispatchMode('hat');
     setNewTaskTitle(`[${hat.name}] `);
     setIsNewTaskOpen(true);
   };
@@ -1103,10 +1101,6 @@ export default function DashboardPage() {
       return;
     }
 
-    if (dispatchMode === 'hat' && !targetHatId) {
-      alert('Please select a Hat group');
-      return;
-    }
 
     if (dispatchMode === 'committee' && !targetCommitteeId) {
       alert('Please select a Standing Committee');
@@ -1158,7 +1152,7 @@ export default function DashboardPage() {
             description: newTaskDescription,
             priority: newTaskPriority,
             deadline: new Date(newTaskDeadline).toISOString(),
-            target_type: dispatchMode === 'department' ? 'department' : dispatchMode === 'all' ? 'all_staff' : dispatchMode === 'hat' ? 'hat' : dispatchMode === 'committee' ? 'committee' : 'selected_users',
+            target_type: dispatchMode === 'department' ? 'department' : dispatchMode === 'all' ? 'all_staff' : dispatchMode === 'committee' ? 'committee' : 'selected_users',
             target_committee_id: targetCommitteeId ? Number(targetCommitteeId) : undefined,
             target_dept: targetDept,
             target_hat_id: targetHatId ? Number(targetHatId) : undefined,

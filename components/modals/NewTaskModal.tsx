@@ -5,15 +5,14 @@ import { Hat, User, FacultyCommittee } from '@/types';
 import { Users2, Paperclip, FileText, Send, Sparkles } from 'lucide-react';
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
 import { INSTITUTIONAL_PILLARS, PillarTaskTemplate } from '@/lib/pillar_catalog';
-import { getSubTasksForHat } from '@/lib/hat_tasks_catalog';
 import { FileUploadZone } from '@/components/common/FileUploadZone';
 
 interface NewTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
-  dispatchMode: 'single' | 'committee' | 'hat' | 'selected' | 'department' | 'all';
-  setDispatchMode: (mode: 'single' | 'committee' | 'hat' | 'selected' | 'department' | 'all') => void;
+  dispatchMode: 'single' | 'committee' | 'selected' | 'department' | 'all';
+  setDispatchMode: (mode: 'single' | 'committee' | 'selected' | 'department' | 'all') => void;
   hats: Hat[];
   targetHatId: number | '';
   setTargetHatId: (val: number | '') => void;
@@ -174,7 +173,7 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
               <span>Dispatch Target Mode</span>
               <span style={{ fontSize: '0.75rem', color: '#60a5fa', fontWeight: 600 }}>
                 {dispatchMode === 'single' ? 'Single Staff Member' :
-                 dispatchMode === 'hat' ? `Hat Group: ${hats.find(h => h.id === Number(targetHatId))?.name || 'Choose Group'}` :
+                 
                  dispatchMode === 'selected' ? `${selectedRecipients.length} Staff Selected` :
                  dispatchMode === 'department' ? `Department: ${targetDept}` : 'All Faculty & Staff'}
               </span>
@@ -186,13 +185,6 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
                 onClick={() => setDispatchMode('single')}
               >
                 <span>👤 Single</span>
-              </button>
-              <button
-                type="button"
-                className={`segmented-btn ${dispatchMode === 'hat' ? 'active' : ''}`}
-                onClick={() => setDispatchMode('hat')}
-              >
-                <span>🎩 Hat Group</span>
               </button>
               <button
                 type="button"
@@ -286,82 +278,6 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
                   ))}
                 </optgroup>
               </select>
-            </div>
-          )}
-
-          {/* Mode 2: By Hat / Committee Group */}
-          {dispatchMode === 'hat' && (
-            <div className="form-group">
-              <label className="form-label">Select Hat / Committee Group *</label>
-              <select
-                className="form-select"
-                value={targetHatId}
-                onChange={(e) => setTargetHatId(Number(e.target.value))}
-                required
-              >
-                <option value="">-- Choose a Hat / Committee Group --</option>
-                {hats.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.icon || '🎩'} {h.name} ({h.members?.length || 0} members)
-                  </option>
-                ))}
-              </select>
-
-              {targetHatId && (
-                <div style={{
-                  marginTop: '12px',
-                  padding: '14px',
-                  borderRadius: '8px',
-                  background: 'rgba(139, 92, 246, 0.08)',
-                  border: '1px solid rgba(139, 92, 246, 0.25)'
-                }}>
-                  {(() => {
-                    const selHat = hats.find(h => h.id === Number(targetHatId));
-                    if (!selHat) return null;
-                    return (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '1.3rem' }}>{selHat.icon || '🎩'}</span>
-                            <strong style={{ fontSize: '0.95rem', color: '#c4b5fd' }}>{selHat.name}</strong>
-                          </div>
-                          <span style={{ fontSize: '0.75rem', background: 'rgba(139, 92, 246, 0.2)', color: '#ddd6fe', padding: '2px 8px', borderRadius: '999px', fontWeight: 600 }}>
-                            {selHat.members?.length || 0} Recipients
-                          </span>
-                        </div>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-                          {selHat.description}
-                        </p>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase' }}>
-                          Task will be simultaneously dispatched to:
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '110px', overflowY: 'auto' }}>
-                          {selHat.members && selHat.members.length > 0 ? (
-                            selHat.members.map(m => (
-                              <span key={m.user_id} style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '0.75rem',
-                                padding: '3px 8px',
-                                borderRadius: '6px',
-                                background: 'var(--bg-inset)',
-                                border: '1px solid var(--border)'
-                              }}>
-                                <span>👤</span>
-                                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{m.user_title || ''} {m.user_name}</span>
-                                <span style={{ color: 'var(--accent-blue)', fontSize: '0.7rem' }}>({m.role_in_hat})</span>
-                              </span>
-                            ))
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--status-overdue)' }}>No members in this Hat yet. Please add members first.</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
             </div>
           )}
 
