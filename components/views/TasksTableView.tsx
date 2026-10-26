@@ -27,7 +27,9 @@ import {
   Layers,
   ArrowUpDown,
   Building2,
-  FolderOpen
+  FolderOpen,
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 
 interface TasksTableViewProps {
@@ -91,6 +93,52 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
   const [scopeFilter, setScopeFilter] = useState<'my_tasks' | 'all_tasks'>(isDean ? 'all_tasks' : 'my_tasks');
   const [manageAssigneesTask, setManageAssigneesTask] = useState<Task | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>(statusFilter || 'all');
+  const [localSyncing, setLocalSyncing] = useState(false);
+
+  const handleSyncSheet = async () => {
+    try {
+      setLocalSyncing(true);
+      const res = await fetch('/api/tasks/sync-sheet', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        if (onRefreshTasks) onRefreshTasks();
+        else window.location.reload();
+      } else {
+        alert('Sync error: ' + (data.error || 'Failed to sync with Google Sheet'));
+      }
+    } catch (err: any) {
+      alert('Error connecting to Google Sheet: ' + err.message);
+    } finally {
+      setLocalSyncing(false);
+    }
+  };
+
+  const handleQuickMarkDone = async (taskId: number) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done', completion_notes: 'Marked completed directly from portal' }),
+      });
+      if (res.ok) {
+        if (onRefreshTasks) onRefreshTasks();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleQuickDeleteTask = async (taskId: number, title: string) => {
+    if (!confirm(`Are you sure you want to remove the task "${title}"?`)) return;
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+      if (res.ok) {
+        if (onRefreshTasks) onRefreshTasks();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleSaveAssignees = async (taskId: number, newMembers: string[]) => {
     try {
@@ -382,6 +430,25 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
 
         {/* Right: Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', zIndex: 1 }}>
+          <button
+            onClick={handleSyncSheet}
+            disabled={localSyncing}
+            className="btn btn-secondary btn-sm"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderColor: 'rgba(16, 185, 129, 0.3)',
+              color: '#10b981',
+            }}
+            title="Fetch live directives directly from Google Sheet"
+          >
+            <RefreshCw size={14} className={localSyncing ? 'animate-spin' : ''} />
+            <span>{localSyncing ? 'Syncing...' : 'Sync Google Sheet'}</span>
+          </button>
           {onOpenImportModal && isDean && (
             <button
               onClick={onOpenImportModal}
@@ -1337,6 +1404,52 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                           >
                             <span>Update</span>
                           </button>
+
+                          {/* Quick Mark Done for Dean or Task Owner */}
+                          {task.status !== 'done' && (isDean || currentUser?.id === task.assigned_to_id || currentUser?.id === task.task_owner_id || currentUser?.full_name === task.task_owner_name) && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => handleQuickMarkDone(task.id)}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                                borderColor: 'rgba(16, 185, 129, 0.3)',
+                                color: '#10b981',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                              }}
+                              title="Mark Done directly in portal"
+                            >
+                              <CheckCircle2 size={12} />
+                              <span>Done</span>
+                            </button>
+                          )}
+
+                          {/* Quick Delete Task for Dean or Task Owner */}
+                          {(isDean || currentUser?.id === task.assigned_to_id || currentUser?.id === task.task_owner_id || currentUser?.full_name === task.task_owner_name) && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => handleQuickDeleteTask(task.id, task.title)}
+                              style={{
+                                padding: '4px 6px',
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                                borderColor: 'rgba(239, 68, 68, 0.25)',
+                                color: '#ef4444',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                              }}
+                              title="Delete task directly from portal"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
 
                           {/* Dean Approval Quick Action or Approved Status */}
                           {task.dean_acknowledged === 1 ? (

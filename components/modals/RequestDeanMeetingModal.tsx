@@ -72,6 +72,12 @@ export const RequestDeanMeetingModal: React.FC<RequestDeanMeetingModalProps> = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDean =
+    currentUser?.id === 6496 ||
+    currentUser?.email === 'gehan.safwat@msa.edu.eg' ||
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'dean';
+
   if (!isOpen) return null;
 
   const handleToggleStaff = (id: number) => {
@@ -101,14 +107,16 @@ export const RequestDeanMeetingModal: React.FC<RequestDeanMeetingModalProps> = (
       return;
     }
 
-    // Verify 3 distinct options
-    const opt1Key = `${opt1Date}_${opt1Time}`;
-    const opt2Key = `${opt2Date}_${opt2Time}`;
-    const opt3Key = `${opt3Date}_${opt3Time}`;
+    // For regular staff, verify 3 distinct options. For Dean, single convenient date/time is used.
+    if (!isDean) {
+      const opt1Key = `${opt1Date}_${opt1Time}`;
+      const opt2Key = `${opt2Date}_${opt2Time}`;
+      const opt3Key = `${opt3Date}_${opt3Time}`;
 
-    if (opt1Key === opt2Key || opt1Key === opt3Key || opt2Key === opt3Key) {
-      setError('Please provide 3 distinct date & time options so the Dean can choose between different times.');
-      return;
+      if (opt1Key === opt2Key || opt1Key === opt3Key || opt2Key === opt3Key) {
+        setError('Please provide 3 distinct date & time options so the Dean can choose between different times.');
+        return;
+      }
     }
 
     try {
@@ -194,10 +202,10 @@ export const RequestDeanMeetingModal: React.FC<RequestDeanMeetingModalProps> = (
         decisions: [],
         action_items: [],
         time_options,
-        is_dean_request: true,
+        is_dean_request: !isDean,
         coordinator_id: coordinatorId,
         coordinator_name: staff.find(s => s.id === coordinatorId)?.full_name || "Dean's Executive Office",
-        status: 'pending_dean_approval',
+        status: isDean ? 'confirmed' : 'pending_dean_approval',
       };
 
       const res = await fetch('/api/meetings', {
@@ -265,10 +273,12 @@ export const RequestDeanMeetingModal: React.FC<RequestDeanMeetingModalProps> = (
             <span style={{ fontSize: '1.8rem' }}>📅</span>
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
-                Request Official Meeting with Prof. Dr. Gehan Safwat
+                {isDean ? "👑 Convene Official Meeting (Dean's Schedule)" : "Request Official Meeting with Prof. Dr. Gehan Safwat"}
               </h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-                Propose 3 preferred time slot options for the Dean to review and confirm. Venue: <strong>Dean's Office</strong>
+                {isDean 
+                  ? "Schedule an official consultation or departmental meeting at your convenience. Participating staff will be convened immediately." 
+                  : "Propose 3 preferred time slot options for the Dean to review and confirm. Venue: Dean's Office"}
               </p>
             </div>
           </div>
@@ -464,18 +474,64 @@ export const RequestDeanMeetingModal: React.FC<RequestDeanMeetingModalProps> = (
             </span>
           </div>
 
-          {/* 3 PREFERRED TIME OPTIONS SECTION */}
-          <div
-            style={{
-              padding: '18px',
-              borderRadius: '12px',
-              background: 'var(--bg-inset)',
-              border: '1px solid var(--border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-            }}
-          >
+          {/* TIME SELECTION: Single convenient slot for Dean, or 3 options for Staff */}
+          {isDean ? (
+            <div
+              style={{
+                padding: '18px',
+                borderRadius: '12px',
+                background: 'var(--bg-inset)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={18} color="var(--accent-blue)" />
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
+                  📅 Meeting Date & Time (Chosen at Dean's Convenience)
+                </h4>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0' }}>
+                Convene staff at the day and time that best suits your schedule.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 700 }}>Meeting Date *</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={opt1Date}
+                    onChange={(e) => setOpt1Date(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 700 }}>Convenient Time Window *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. 11:00 AM - 12:30 PM"
+                    value={opt1Time}
+                    onChange={(e) => setOpt1Time(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: '18px',
+                borderRadius: '12px',
+                background: 'var(--bg-inset)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+              }}
+            >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Clock size={18} color="var(--accent-blue)" />
@@ -623,6 +679,7 @@ export const RequestDeanMeetingModal: React.FC<RequestDeanMeetingModalProps> = (
               </div>
             </div>
           </div>
+          )}
 
           {/* Attendees Selection */}
           <div>
@@ -727,7 +784,7 @@ export const RequestDeanMeetingModal: React.FC<RequestDeanMeetingModalProps> = (
               }}
             >
               <Send size={16} />
-              <span>{loading ? 'Submitting Request...' : 'Send Request with 3 Options'}</span>
+              <span>{loading ? 'Processing...' : isDean ? '👑 Confirm & Convene Meeting' : 'Send Request with 3 Options'}</span>
             </button>
           </div>
         </form>

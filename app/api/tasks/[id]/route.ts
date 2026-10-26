@@ -299,9 +299,19 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    const isAuthorized = user.role === 'admin' || user.id === 99 || user.id === 6496 || user.id === 6591 || user.role === 'dean' || user.role === 'vice_dean' || existingTask.assigned_by_id === user.id;
+    const isAuthorized = 
+      user.role === 'admin' || 
+      user.id === 99 || 
+      user.id === 6496 || 
+      user.id === 6591 || 
+      user.role === 'dean' || 
+      user.role === 'vice_dean' || 
+      existingTask.assigned_by_id === user.id ||
+      existingTask.task_owner_id === user.id ||
+      existingTask.assigned_to_id === user.id;
+
     if (!isAuthorized) {
-      return NextResponse.json({ error: 'Permission denied. Only leadership or task creator can delete tasks.' }, { status: 403 });
+      return NextResponse.json({ error: 'Permission denied. Only leadership, task owner, or task creator can remove tasks.' }, { status: 403 });
     }
 
     await execute('DELETE FROM tasks WHERE id = ?', [taskId]);

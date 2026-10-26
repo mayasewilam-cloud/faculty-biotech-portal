@@ -171,8 +171,10 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                 className="btn btn-primary"
                 onClick={onOpenRequestMeetingWithDean}
                 style={{
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  borderColor: '#059669',
+                  background: isDeanOrAdmin
+                    ? 'linear-gradient(135deg, #154734, #1e6b4c)'
+                    : 'linear-gradient(135deg, #10b981, #059669)',
+                  borderColor: isDeanOrAdmin ? '#1e6b4c' : '#059669',
                   boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
                   padding: '10px 16px',
                   fontWeight: 700,
@@ -182,7 +184,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                 }}
               >
                 <Calendar size={18} />
-                <span>Request Meeting with Dean Gehan</span>
+                <span>{isDeanOrAdmin ? "📅 Schedule Meeting at Dean's Convenience" : "📅 Request Meeting with Dean Gehan"}</span>
               </button>
             )}
 

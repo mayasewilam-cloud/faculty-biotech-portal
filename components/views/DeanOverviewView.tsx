@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   ArrowRight,
   Plus,
-  ExternalLink
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react';
 
 interface DeanOverviewViewProps {
@@ -206,6 +207,37 @@ export const DeanOverviewView: React.FC<DeanOverviewViewProps> = ({
         {/* Dean Action Buttons: Export & Excel Sync */}
         {isDean && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/tasks/sync-sheet', { method: 'POST' });
+                  const data = await res.json();
+                  if (data.success) {
+                    window.location.reload();
+                  } else {
+                    alert('Sync error: ' + (data.error || 'Failed to sync with Google Sheet'));
+                  }
+                } catch (e: any) {
+                  alert('Error syncing sheet: ' + e.message);
+                }
+              }}
+              className="btn btn-secondary btn-sm"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                padding: '6px 12px',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderColor: 'rgba(16, 185, 129, 0.3)',
+                color: '#10b981',
+              }}
+              title="Sync live directives directly from Task Follow-Up Google Sheet"
+            >
+              <RefreshCw size={14} />
+              <span>Sync Google Sheet</span>
+            </button>
             {onOpenImportModal && (
               <button
                 onClick={onOpenImportModal}
