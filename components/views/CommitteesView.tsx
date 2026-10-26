@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { FacultyCommittee, User, Task } from '@/types';
+import { CommitteeImportModal } from '@/components/modals/CommitteeImportModal';
+import { Upload } from 'lucide-react';
 import {
   Building2,
   Plus,
@@ -53,6 +55,7 @@ export const CommitteesView: React.FC<CommitteesViewProps> = ({
   onViewCommitteeTasks,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'standing' | 'statutory' | 'council'>('all');
   const [committeeToDelete, setCommitteeToDelete] = useState<{ id: number; name: string } | null>(null);
 
@@ -167,9 +170,30 @@ export const CommitteesView: React.FC<CommitteesViewProps> = ({
             </button>
 
             {isDeanOrAdmin && (
-              <button
-                className="btn btn-primary"
-                onClick={onOpenCreateCommittee}
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsImportModalOpen(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    fontWeight: 700,
+                    padding: '9px 15px',
+                    fontSize: '0.85rem',
+                    color: '#10b981',
+                    borderColor: 'rgba(16, 185, 129, 0.4)',
+                  }}
+                  title="Import committees and appointed members from CSV or Excel"
+                >
+                  <Upload size={15} />
+                  <span>Import File / CSV</span>
+                </button>
+
+                <button
+                  className="btn btn-primary"
+                  onClick={onOpenCreateCommittee}
                 style={{
                   background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                   borderColor: '#2563eb',
@@ -185,6 +209,7 @@ export const CommitteesView: React.FC<CommitteesViewProps> = ({
                 <Plus size={16} />
                 <span>Create Official Committee</span>
               </button>
+              </>
             )}
           </div>
         </div>
@@ -715,6 +740,14 @@ export const CommitteesView: React.FC<CommitteesViewProps> = ({
           </div>
         </div>
       )}
+      {/* Modal to Import Committees & Appointed Members */}
+      <CommitteeImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportSuccess={async () => {
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

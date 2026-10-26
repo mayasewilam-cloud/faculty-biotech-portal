@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ALL_FACULTY_STAFF } from '@/lib/public_staff';
 import { Shield, Lock, Mail, ArrowRight, Sun, Moon, Key, UserPlus, CheckCircle2, AlertCircle, User as UserIcon } from 'lucide-react';
 
 export default function LoginPage() {
@@ -346,6 +347,77 @@ export default function LoginPage() {
           {/* MODE 1: SIGN IN */}
           {mode === 'signin' && (
             <form onSubmit={handleSignIn}>
+              {/* Embedded Faculty Profiles Dropdown (1-Click Selection) */}
+              <div style={{ marginBottom: '16px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>🎓 Select Faculty Member (Embedded)</span>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--accent-blue)', fontWeight: 600 }}>Auto-fills email</span>
+                </label>
+                <select
+                  className="form-select"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setEmail(e.target.value);
+                      setSetPasswordEmail(e.target.value);
+                    }
+                  }}
+                  defaultValue=""
+                  style={{ width: '100%', fontSize: '0.85rem', height: '40px' }}
+                >
+                  <option value="">-- Choose your name from directory ({ALL_FACULTY_STAFF.length} staff) --</option>
+                  <optgroup label="👑 Executive Leadership & Deanship">
+                    <option value="gehan.safwat@msa.edu.eg">👑 Prof. Dr. Gehan Safwat — Dean of Faculty (Super Admin)</option>
+                    <option value="amr.ageez@msa.edu.eg">⭐ Prof. Dr. Amr Ageez — Vice Dean for Academic Affairs (Super Admin)</option>
+                    <option value="admin@faculty.edu">Admin — Central University Governance</option>
+                  </optgroup>
+                  <optgroup label="🏛️ Professors & Associate Professors">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'professors').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🩺 Doctors & Ph.D. Lecturers">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'doctors').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🧬 Assistant Lecturers (LA)">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'la').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="📚 Teaching Assistants (TA)">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'ta').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🧪 Research Cadres (N112 & Prototyping)">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'ra_n112' || s.category === 'prototyping_ra').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🏢 Academic Administration">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'administration').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Or type your email directly below:
+                </div>
+              </div>
+
               <div style={{ marginBottom: '16px' }}>
                 <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px' }}>
                   Official University Email
@@ -419,8 +491,76 @@ export default function LoginPage() {
                   Create Your Password
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  Enter your official MSA email. You will choose your personal, confidential password.
+                  Select your profile or enter your official MSA email to set your confidential password.
                 </div>
+              </div>
+
+              {/* Embedded Faculty Profiles Dropdown */}
+              <div style={{ marginBottom: '14px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>🎓 Select Your Profile (Embedded)</span>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--accent-blue)', fontWeight: 600 }}>Auto-fills email</span>
+                </label>
+                <select
+                  className="form-select"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSetPasswordEmail(e.target.value);
+                      setEmail(e.target.value);
+                    }
+                  }}
+                  defaultValue=""
+                  style={{ width: '100%', fontSize: '0.85rem', height: '40px' }}
+                >
+                  <option value="">-- Choose your name from directory ({ALL_FACULTY_STAFF.length} staff) --</option>
+                  <optgroup label="👑 Executive Leadership & Deanship">
+                    <option value="gehan.safwat@msa.edu.eg">👑 Prof. Dr. Gehan Safwat — Dean of Faculty (Super Admin)</option>
+                    <option value="amr.ageez@msa.edu.eg">⭐ Prof. Dr. Amr Ageez — Vice Dean for Academic Affairs (Super Admin)</option>
+                    <option value="admin@faculty.edu">Admin — Central University Governance</option>
+                  </optgroup>
+                  <optgroup label="🏛️ Professors & Associate Professors">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'professors').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🩺 Doctors & Ph.D. Lecturers">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'doctors').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🧬 Assistant Lecturers (LA)">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'la').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="📚 Teaching Assistants (TA)">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'ta').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🧪 Research Cadres (N112 & Prototyping)">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'ra_n112' || s.category === 'prototyping_ra').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🏢 Academic Administration">
+                    {ALL_FACULTY_STAFF.filter(s => s.category === 'administration').map(s => (
+                      <option key={s.id} value={s.email}>
+                        {s.full_name} — {s.rank || s.title} ({s.email})
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
               </div>
 
               <div style={{ marginBottom: '14px' }}>

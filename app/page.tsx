@@ -2568,7 +2568,7 @@ export default function DashboardPage() {
         )}
 
         {/* TAB: FACULTY DIRECTORY & PERFORMANCE OVERVIEW (Dean Only) */}
-        {activeTab === 'staff' && isDean && (
+        {activeTab === 'staff' && (
           <StaffView
             baseUsers={baseUsers}
             profUsers={profUsers}
