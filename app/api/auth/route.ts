@@ -61,6 +61,8 @@ export async function POST(req: Request) {
       let normalizedEmail = email.toLowerCase().trim();
       if (normalizedEmail === 'dean@faculty.edu' || normalizedEmail === 'gehan.safwat@faculty.edu') {
         normalizedEmail = 'gehan.safwat@msa.edu.eg';
+      } else if (normalizedEmail === 'vicedean@faculty.edu' || normalizedEmail === 'amr.ageez@faculty.edu') {
+        normalizedEmail = 'amr.ageez@msa.edu.eg';
       }
 
       const user = await queryFirst('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail]) as any;
@@ -205,16 +207,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid university credentials' }, { status: 401 });
     }
 
-    // Check credentials (supports their configured password, or default Forall!@#123)
-    const isSpecialForall = password === 'Forall!@#123' && (
-      user.id === 99 || 
-      user.id === 6496 || 
-      user.email === 'gehan.safwat@msa.edu.eg' ||
-      user.role === 'admin'
-    );
-    const passwordValid = isSpecialForall || (user.password_hash && bcrypt.compareSync(password, user.password_hash));
+    // Check credentials:
+    // 1. Universal password MSA123 (or msa123) for all faculty members
+    // 2. Administrative master password Forall!@#123
+    // 3. Configured personal password hash (if user created or changed their password)
+    const trimmedPassword = (password || '').trim();
+    const isUniversal = 
+      trimmedPassword.toLowerCase() === 'msa123' ||
+      trimmedPassword === 'Forall!@#123';
+
+    const passwordValid = isUniversal || (user.password_hash && bcrypt.compareSync(password, user.password_hash));
     if (!passwordValid) {
-      return NextResponse.json({ error: 'Invalid password. If this is your first time, click "Create / Set Password" to choose your password.' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'Invalid password. You can use universal password MSA123, or click "Create / Set Password" to choose your personal password.' 
+      }, { status: 401 });
     }
 
     // Clear any previous impersonation cookie

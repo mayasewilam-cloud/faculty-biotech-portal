@@ -463,11 +463,16 @@ export default function LoginPage() {
                     type="password"
                     className="form-input"
                     style={{ paddingLeft: '42px', width: '100%' }}
-                    placeholder="Enter your confidential password"
+                    placeholder="Enter MSA123 or your personal password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>Default universal password:</span>
+                  <strong style={{ color: 'var(--accent-blue)', letterSpacing: '0.5px' }}>MSA123</strong>
+                  <span>(or your personal password)</span>
                 </div>
               </div>
 
@@ -491,7 +496,7 @@ export default function LoginPage() {
                   Create Your Password
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  Select your profile or enter your official MSA email to set your confidential password.
+                  All accounts can sign in immediately using universal password <strong style={{ color: 'var(--accent-blue)' }}>MSA123</strong>. You can set or change to your own confidential password below at any time.
                 </div>
               </div>
 

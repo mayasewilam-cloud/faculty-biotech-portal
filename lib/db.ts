@@ -786,20 +786,26 @@ export async function queryFirst<T = any>(sql: string, params: any[] = []): Prom
     return { count: tasks.length } as T;
   }
   
-  if (normalizedSql.includes('where email = ? and id != ?')) {
+  if (normalizedSql.includes('where email = ? and id != ?') || normalizedSql.includes('where lower(email) = ? and id != ?')) {
     const email = String(params[0] || '').toLowerCase().trim();
     const excludeId = Number(params[1]);
     const user = allStaff.find(u => u.email.toLowerCase() === email && u.id !== excludeId);
     return (user ? { ...user, status: 'active' } : null) as T | null;
   }
   
-  if (normalizedSql.includes('from users where email = ?')) {
+  if (normalizedSql.includes('from users') && (normalizedSql.includes('email = ?') || normalizedSql.includes('email) = ?') || normalizedSql.includes('lower(email) = ?') || normalizedSql.includes('email ='))) {
+    if (normalizedSql.includes('id !=') || normalizedSql.includes('id <>')) {
+      const email = String(params[0] || '').toLowerCase().trim();
+      const excludeId = Number(params[1]);
+      const user = allStaff.find(u => u.email.toLowerCase() === email && u.id !== excludeId);
+      return (user ? { ...user, status: 'active' } : null) as T | null;
+    }
     const email = String(params[0] || '').toLowerCase().trim();
     const user = allStaff.find(u => u.email.toLowerCase() === email);
     return (user ? { ...user, status: 'active' } : null) as T | null;
   }
 
-  if (normalizedSql.includes('from users where id = ?')) {
+  if (normalizedSql.includes('from users') && (normalizedSql.includes('where id = ?') || normalizedSql.includes('where id =') || normalizedSql.includes('where u.id = ?'))) {
     const id = Number(params[0]);
     const user = allStaff.find(u => u.id === id);
     return (user ? { ...user, status: 'active' } : null) as T | null;
@@ -1330,8 +1336,15 @@ export async function removeMemberFromHat(hatId: number, userId: number): Promis
 
 // Automatically ensure all official MSA Faculty of Biotechnology personnel are in D1 SQL Database
 export async function ensureAllStaffExist(): Promise<void> {
+  await ensureInitialized();
   const db = getD1();
-  if (!db) return;
+  if (!db) {
+    if (!g.__memoryUsers || g.__memoryUsers.length === 0) {
+      g.__memoryUsers = JSON.parse(JSON.stringify(INITIAL_STAFF_SEED));
+      await persistCurrentState();
+    }
+    return;
+  }
 
   try {
     try { await db.prepare(`ALTER TABLE tasks ADD COLUMN attachment_name TEXT`).run(); } catch {}
