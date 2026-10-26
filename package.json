@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "node scripts/copy-standalone-assets.mjs",
     "build:worker": "opennextjs-cloudflare build",
     "start": "next start",
     "deploy": "node scripts/deploy.mjs",

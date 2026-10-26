@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // Native Vercel and PWA optimizations
 };
 
 export default nextConfig;
