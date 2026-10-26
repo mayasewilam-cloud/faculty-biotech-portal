@@ -518,27 +518,24 @@ async function ensureInitialized(): Promise<void> {
       if (Array.isArray(disk.push_subscriptions)) g.__memorySubscriptions = disk.push_subscriptions;
       if (Array.isArray(disk.dean_availability_slots)) g.__memoryDeanSlots = disk.dean_availability_slots;
 
+      const baseStaff = JSON.parse(JSON.stringify(INITIAL_STAFF_SEED));
+      const existingIds = new Set(baseStaff.map((u: any) => u.id));
+
       if (Array.isArray(disk.users) && disk.users.length > 0) {
-        const hasBaseStaff = disk.users.some((u: any) => u.id === 6496);
-        if (hasBaseStaff) {
-          g.__memoryUsers = disk.users;
-        } else {
-          // Backward compatibility: disk.users previously only stored custom users (id >= 20000)
-          const baseStaff = JSON.parse(JSON.stringify(INITIAL_STAFF_SEED));
-          const existingIds = new Set(baseStaff.map((u: any) => u.id));
-          for (const cu of disk.users) {
-            if (!existingIds.has(cu.id)) {
-              baseStaff.push(cu);
-              existingIds.add(cu.id);
-            }
+        for (const diskUser of disk.users) {
+          const match = baseStaff.find((u: any) => u.id === diskUser.id || (diskUser.email && u.email.toLowerCase() === diskUser.email.toLowerCase()));
+          if (match) {
+            if (diskUser.password_hash) match.password_hash = diskUser.password_hash;
+            if (diskUser.phone) match.phone = diskUser.phone;
+            if (diskUser.avatar) match.avatar = diskUser.avatar;
+          } else if (diskUser.id >= 20000 && !existingIds.has(diskUser.id)) {
+            baseStaff.push(diskUser);
+            existingIds.add(diskUser.id);
           }
-          g.__memoryUsers = baseStaff;
         }
-        g.__memoryCustomUsers = g.__memoryUsers.filter((u: any) => u.id >= 20000);
-      } else {
-        g.__memoryUsers = JSON.parse(JSON.stringify(INITIAL_STAFF_SEED));
-        g.__memoryCustomUsers = [];
       }
+      g.__memoryUsers = baseStaff;
+      g.__memoryCustomUsers = g.__memoryUsers.filter((u: any) => u.id >= 20000);
     } else if (!g.__memoryStorageInitialized) {
       await persistCurrentState();
     }

@@ -1008,6 +1008,11 @@ async function runTestSuite() {
   const testDeliverableFileName = 'confidential_syllabus_salma.pdf';
   
   await test('Confidential Multi-Assignee Submission Request (POST /api/tasks is_submission_request)', async () => {
+    const usersRes = await fetch(`${BASE_URL}/api/users`, { headers: { Cookie: cookieHeader } });
+    const usersData = await usersRes.json();
+    const candidateUsers = (usersData.users || []).filter(u => u.id !== 6496 && u.id !== 99);
+    const targetUserIds = candidateUsers.slice(0, 2).map(u => u.id);
+
     const res = await fetch(`${BASE_URL}/api/tasks`, {
       method: 'POST',
       headers: {
@@ -1020,7 +1025,7 @@ async function runTestSuite() {
         is_submission_request: true,
         submission_type: 'file_upload',
         is_confidential: true,
-        target_user_ids: [12426, 15655], // Salma Raouf & Hala Khorshid
+        target_user_ids: targetUserIds,
         form_link: 'https://docs.google.com/spreadsheets/d/18ptos5jsQWknMQUy9AEjhhyAlCvmlU_LreOlHALGUcA/edit',
         priority: 'high',
         deadline: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],

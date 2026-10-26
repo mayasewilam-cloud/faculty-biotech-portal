@@ -5,6 +5,59 @@ import { Hat, User, FacultyCommittee } from '@/types';
 import { Users2, Paperclip, FileText, Send, Sparkles } from 'lucide-react';
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
 import { FALL_2026_TASK_ROSTER } from '@/lib/fall_2026_tasks_roster';
+import { QUADRUPLET_ALIASES } from '@/lib/staff_seed';
+
+export const formatUserDisplayName = (u?: any, fallbackId?: number) => {
+  if (!u) return fallbackId ? ('Staff #' + fallbackId) : '';
+  const fullName = u.full_name || '';
+  const title = u.title || '';
+  if (!title) return fullName;
+  if (fullName.toLowerCase().startsWith(title.toLowerCase())) {
+    return fullName;
+  }
+  return title + ' ' + fullName;
+};
+
+export const resolveTaskMemberUser = (mName: string, users: any[]) => {
+  const normAlpha = (t: string) => {
+    const withoutTitle = t.toLowerCase().replace(/^(prof\.|dr\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/, '');
+    return withoutTitle.replace(/[^a-z0-9]/g, '');
+  };
+
+  const cleanM = normAlpha(mName);
+  if (!cleanM) return undefined;
+
+  for (const [k, v] of Object.entries(QUADRUPLET_ALIASES || {})) {
+    if (normAlpha(k) === cleanM) {
+      const target = normAlpha(v);
+      const matched = users.find(u => normAlpha(u.full_name).includes(target) || target.includes(normAlpha(u.full_name)));
+      if (matched) return matched;
+    }
+  }
+
+  const directMatch = users.find(u => {
+    const uClean = normAlpha(u.full_name);
+    return cleanM === uClean || cleanM.includes(uClean) || uClean.includes(cleanM);
+  });
+  if (directMatch) return directMatch;
+
+  const mTokens = mName.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms'].includes(t));
+  if (mTokens.length >= 1) {
+    for (const u of users) {
+      const uTokens = u.full_name.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms'].includes(t));
+      if (mTokens.length >= 2 && uTokens.length >= 2) {
+        if (mTokens[0] === uTokens[0] && (mTokens[mTokens.length - 1] === uTokens[uTokens.length - 1] || mTokens[1] === uTokens[1])) {
+          return u;
+        }
+      } else if (mTokens.length >= 1 && uTokens.length >= 1) {
+        if (mTokens[0] === uTokens[0]) {
+          return u;
+        }
+      }
+    }
+  }
+  return undefined;
+};
 import { INSTITUTIONAL_PILLARS, PillarTaskTemplate } from '@/lib/pillar_catalog';
 import { FileUploadZone } from '@/components/common/FileUploadZone';
 
@@ -154,14 +207,10 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
         setNewTaskGoogleFormUrl(directive.google_form_url);
       }
 
-      // Match member names against allUsers
+      // Match member names against allUsers with quadruplet alias & token resolution
       const matchedUserIds: number[] = [];
       for (const mName of directive.members) {
-        const cleanM = mName.toLowerCase().replace(/^(prof\.|dr\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.)\s*/, '').trim();
-        const found = allUsers.find(u => {
-          const uClean = u.full_name.toLowerCase().replace(/^(prof\.|dr\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.)\s*/, '').trim();
-          return cleanM.includes(uClean) || uClean.includes(cleanM);
-        });
+        const found = resolveTaskMemberUser(mName, allUsers);
         if (found && !matchedUserIds.includes(found.id)) {
           matchedUserIds.push(found.id);
         }
@@ -696,7 +745,7 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
                           />
                           <div>
                             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                              {u.title} {u.full_name}
+                              {formatUserDisplayName(u)}
                             </div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                               {u.department}

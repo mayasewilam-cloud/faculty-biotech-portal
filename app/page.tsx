@@ -408,6 +408,13 @@ export default function DashboardPage() {
         setAllUsers(usersData.users || []);
       }
 
+      // 2.5 Automatically synchronize live tasks from Google Sheet on portal open
+      try {
+        await fetch('/api/tasks/sync-sheet');
+      } catch (sheetSyncErr) {
+        console.warn('Background Google Sheet sync on open:', sheetSyncErr);
+      }
+
       // 3. Fetch tasks, hats, committees, meetings, and dean availability slots
       await Promise.all([
         fetchTasks(),

@@ -1,33 +1,7 @@
 import { persistCurrentState } from './db';
-import { ALL_FACULTY_STAFF } from './public_staff';
+import { INITIAL_STAFF_SEED, QUADRUPLET_ALIASES } from './staff_seed';
 
 const SPREADSHEET_ID = '18ptos5jsQWknMQUy9AEjhhyAlCvmlU_LreOlHALGUcA';
-
-const KNOWN_ALIASES: Record<string, number> = {
-  'nada hassan elgazzar': 13072, // LA. Nada El-Gazzar
-  'habiba khaled abdelrazek abdelaziz moussa': 15169, // TA. Habiba Moussa
-  'mustafa mahmoud mohamed elbakry': 14509, // TA. Mohamed Fahim
-  'youssef ali salah-eldeen aboulkheir': 14353, // LA. Youssef Kheir
-  'rawan salah bahaaeldein sayed': 15241, // LA. Rawan Aly
-  'maram ahmed adel': 11633, // LA. Maram El-Demerdash
-  'yara ahmed muhammed muhammed': 11103, // Dr. Yara Aly
-  'nouran yehia hamed hemida': 12600, // LA. Nouran Hamida
-  'abdel aziz mohamed nasr': 13820, // LA. Abdel Saleh
-  'sara badwai fathy badawi': 13347, // TA. Sara El-Gharably
-  'amr mohamed ageez': 6591, // Prof. Dr. Amr Ageez
-  'salma ahmed effat mohamed': 12426, // LA. Salma Raouf
-  'hala moataz abdelhameed hassan': 15655, // TA. Hala Khorshid
-  'ahmed tamer mohamed abd elwa': 15728, // TA. Ahmed Mohamed
-  'mennat allah gamal mohamed hussein': 14686, // Ms. Menna Hussein
-  'abdelrahman saad kamel mohamed': 10213, // Dr. Abdel Mahmoud
-  'maya hany mohamed abd elfattah': 13988, // TA. Maya Sweilam
-  'chahd wael hassan fahmy': 15654, // TA. Shahd Fahmy
-  'asmaa abdel-hamed abdel-hamed saleh': 9783, // Ms. Asmaa Saleh
-  'ahmed mohamed refaat elsayed': 12230, // Dr. Ahmed Mohamed
-  'nashwa mahmoud rizk mahmoud': 13886, // Ms. Nashwa Mahmoud
-  'hebatallah kamal abdel fattah': 12698, // Ms. Heba Mohamed
-  'yasmin abdel latif mahmoud': 11093, // Dr. Zahra Hussein
-};
 
 function resolveAssignee(rawOwner: string) {
   if (!rawOwner) {
@@ -35,50 +9,76 @@ function resolveAssignee(rawOwner: string) {
       id: 6496,
       name: 'Prof. Dr. Gehan Safwat',
       email: 'gehan.safwat@msa.edu.eg',
-      title: 'Prof. Dr.',
-      role: 'admin',
-      department: 'Faculty Leadership',
+      title: 'Dean',
+      role: 'dean',
+      department: 'Faculty Administration',
     };
   }
 
   const clean = rawOwner.toLowerCase().trim();
-  if (KNOWN_ALIASES[clean]) {
-    const targetId = KNOWN_ALIASES[clean];
-    const found = ALL_FACULTY_STAFF.find(u => u.id === targetId);
-    if (found) {
-      return {
-        id: found.id,
-        name: found.full_name,
-        email: found.email,
-        title: found.rank || found.title,
-        role: found.role,
-        department: found.department,
-      };
+  const normAlpha = (t: string) => t.toLowerCase().replace(/^(prof\.|dr\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/, '').replace(/[^a-z0-9]/g, '');
+  const cleanNorm = normAlpha(clean);
+
+  let targetName = clean;
+  for (const [k, v] of Object.entries(QUADRUPLET_ALIASES || {})) {
+    if (normAlpha(k) === cleanNorm) {
+      targetName = v;
+      break;
     }
   }
 
-  // Token matching
-  for (const u of ALL_FACULTY_STAFF) {
-    const uClean = u.full_name.toLowerCase().replace(/^(prof\.|dr\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.)\s*/, '').trim();
-    if (clean.includes(uClean) || uClean.includes(clean)) {
+  const targetNorm = normAlpha(targetName);
+  for (const u of INITIAL_STAFF_SEED) {
+    const uNorm = normAlpha(u.full_name);
+    if (uNorm === targetNorm || uNorm.includes(targetNorm) || targetNorm.includes(uNorm)) {
       return {
         id: u.id,
         name: u.full_name,
         email: u.email,
-        title: u.rank || u.title,
+        title: u.title,
         role: u.role,
         department: u.department,
       };
     }
   }
 
+  const mTokens = clean.replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms'].includes(t));
+  if (mTokens.length >= 1) {
+    for (const u of INITIAL_STAFF_SEED) {
+      const uTokens = u.full_name.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms'].includes(t));
+      if (mTokens.length >= 2 && uTokens.length >= 2) {
+        if (mTokens[0] === uTokens[0] && (mTokens[mTokens.length - 1] === uTokens[uTokens.length - 1] || mTokens[1] === uTokens[1])) {
+          return {
+            id: u.id,
+            name: u.full_name,
+            email: u.email,
+            title: u.title,
+            role: u.role,
+            department: u.department,
+          };
+        }
+      } else if (mTokens.length >= 1 && uTokens.length >= 1) {
+        if (mTokens[0] === uTokens[0]) {
+          return {
+            id: u.id,
+            name: u.full_name,
+            email: u.email,
+            title: u.title,
+            role: u.role,
+            department: u.department,
+          };
+        }
+      }
+    }
+  }
+
   return {
-    id: 14686,
+    id: 6496,
     name: rawOwner,
-    email: 'biotech.faculty@msa.edu.eg',
-    title: 'Faculty Member',
-    role: 'staff',
-    department: 'Academic Staff',
+    email: 'gehan.safwat@msa.edu.eg',
+    title: 'Dean',
+    role: 'dean',
+    department: 'Faculty Administration',
   };
 }
 
