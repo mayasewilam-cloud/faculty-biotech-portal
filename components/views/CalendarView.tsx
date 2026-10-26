@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Task, Meeting, Hat, User } from '@/types';
+import { isUserAssignedToTask } from '@/lib/taskFilters';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -112,7 +113,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   // Count user-specific deadlines
   const myTasksCount = useMemo(() => {
     if (!currentUser) return 0;
-    return tasks.filter(t => t.assigned_to_id === currentUser.id || t.task_owner_id === currentUser.id).length;
+    return tasks.filter(t => isUserAssignedToTask(t, currentUser)).length;
   }, [tasks, currentUser]);
 
   // Filter tasks and meetings
@@ -122,7 +123,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     const taskEvents = (typeFilter === 'all' || typeFilter === 'tasks')
       ? tasks.filter((t) => {
           if (scopeFilter === 'my_tasks' && currentUser) {
-            const isMine = t.assigned_to_id === currentUser.id || t.task_owner_id === currentUser.id;
+            const isMine = isUserAssignedToTask(t, currentUser);
             if (!isMine) return false;
           }
           if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
@@ -134,7 +135,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           }
           return !!t.deadline;
         }).map((t) => {
-          const isMine = currentUser ? t.assigned_to_id === currentUser.id || t.task_owner_id === currentUser.id : false;
+          const isMine = currentUser ? isUserAssignedToTask(t, currentUser) : false;
           return {
             id: `task-${t.id}`,
             originalId: t.id,

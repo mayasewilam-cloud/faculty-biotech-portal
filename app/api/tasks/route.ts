@@ -47,10 +47,11 @@ export async function GET(req: Request) {
 
     const params: any[] = [];
 
-    // Role-based visibility
+    // Role-based visibility: match direct id, task owner, or multi-member assignment
     if (user.role === 'professor' || user.role === 'staff') {
-      query += ` AND (t.assigned_to_id = ? OR t.assigned_by_id = ? OR t.task_owner_id = ? OR t.committee_id IN (SELECT id FROM committees WHERE chair_id = ?))`;
-      params.push(user.id, user.id, user.id, user.id);
+      const namePattern = `%${user.full_name}%`;
+      query += ` AND (t.assigned_to_id = ? OR t.assigned_by_id = ? OR t.task_owner_id = ? OR t.assigned_members LIKE ? OR t.assignee_name LIKE ? OR t.committee_id IN (SELECT id FROM committees WHERE chair_id = ?))`;
+      params.push(user.id, user.id, user.id, namePattern, namePattern, user.id);
     } else if (assigneeId && assigneeId !== 'all') {
       query += ` AND t.assigned_to_id = ?`;
       params.push(assigneeId);
@@ -199,6 +200,9 @@ export async function POST(req: Request) {
       comment_type,
       received_by,
       form_link,
+      google_form_url,
+      category,
+      assigned_members,
       submission_type = 'standard',
       is_confidential = 0,
       request_prompt,
@@ -210,13 +214,19 @@ export async function POST(req: Request) {
       parent_task_id,
     } = body;
 
-    const targetList = body.assigned_to_ids || body.target_user_ids || (body.assigned_to_id ? [body.assigned_to_id] : []);
+    let targetList = body.assigned_to_ids || body.target_user_ids || (body.assigned_to_id ? [body.assigned_to_id] : []);
+    const assignedMembersList = Array.isArray(assigned_members) ? assigned_members : [];
+
+    if ((!targetList || targetList.length === 0) && assignedMembersList.length > 0) {
+      targetList = [user.id];
+    }
+
     const targetIds: number[] = Array.isArray(targetList) && targetList.length > 0 
       ? targetList.map(Number)
-      : [];
+      : [user.id];
 
-    if (!title || !description || targetIds.length === 0 || !deadline) {
-      return NextResponse.json({ error: 'Title, description, at least one assignee, and deadline are required' }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
     const assignedHatId = hat_id ? Number(hat_id) : null;
@@ -247,15 +257,15 @@ export async function POST(req: Request) {
           tr, start_date, due_time, comment_type, received_by, form_link, submission_type, 
           is_confidential, request_prompt, group_id,
           task_owner_id, task_owner_name, requires_dean_approval, responsibility_model, parent_task_id,
-          drive_link, action_plan
+          drive_link, action_plan, google_form_url, assigned_members, category
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         title,
         description,
         user.id,
         assignee.id,
-        assignee.department,
+        category || assignee.department,
         assignedHatId,
         assignedCommitteeId,
         committee_name || null,
@@ -282,7 +292,10 @@ export async function POST(req: Request) {
         responsibility_model || 'standard',
         validParentTaskId,
         body.drive_link || null,
-        body.action_plan || null
+        body.action_plan || null,
+        google_form_url || null,
+        assignedMembersList.length > 0 ? JSON.stringify(assignedMembersList) : JSON.stringify([assignee.full_name]),
+        category || 'General Academic Directive'
       ]);
 
       const taskId = result.lastInsertRowid;

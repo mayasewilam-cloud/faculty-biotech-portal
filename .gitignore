@@ -79,3 +79,9 @@ Key/
 .vscode/
 .idea/
 
+
+# Temporary Extraction & Patch Scripts
+*.py
+*.pdf
+*.txt
+fall_2026_*.json

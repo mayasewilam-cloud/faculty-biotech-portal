@@ -166,14 +166,14 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
           </div>
         )}
 
-        {/* Required Form / Tracker Link Card */}
-        {task.form_link && (
+        {/* Required Google Form / Tracker Link Card */}
+        {(task.google_form_url || task.form_link) && (
           <div
             style={{
               padding: '14px 18px',
               borderRadius: '10px',
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
+              background: 'rgba(99, 102, 241, 0.12)',
+              border: '1px solid rgba(99, 102, 241, 0.35)',
               marginBottom: '20px',
               display: 'flex',
               alignItems: 'center',
@@ -183,22 +183,22 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
             }}
           >
             <div>
-              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>👉 Required Form / Tracker Link</span>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>📝 Official Task Google Form / Survey</span>
               </div>
               <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Please open the tracker, find your name, and update your status or add a comment.
+                Please fill out and submit the required form directly via Google Forms.
               </p>
             </div>
             <a
-              href={task.form_link}
+              href={(task.google_form_url || task.form_link) || "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-primary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#10b981', borderColor: '#10b981', textDecoration: 'none' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#4f46e5', borderColor: '#4338ca', color: '#ffffff', textDecoration: 'none', fontWeight: 800 }}
             >
+              <span>📝 Open Google Form</span>
               <ExternalLink size={14} />
-              <span>Open Link in New Tab</span>
             </a>
           </div>
         )}

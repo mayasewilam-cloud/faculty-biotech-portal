@@ -194,6 +194,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         updateParams.push(body.action_plan);
       }
 
+      if (body.google_form_url !== undefined) {
+        updates.push('google_form_url = ?');
+        updateParams.push(body.google_form_url);
+      }
+
+      if (body.assigned_members !== undefined) {
+        updates.push('assigned_members = ?');
+        const membersVal = Array.isArray(body.assigned_members) 
+          ? JSON.stringify(body.assigned_members) 
+          : String(body.assigned_members);
+        updateParams.push(membersVal);
+
+        if (Array.isArray(body.assigned_members) && body.assigned_members.length > 0) {
+          updates.push('assignee_name = ?');
+          updateParams.push(body.assigned_members[0]);
+        }
+      }
+
+      if (body.category !== undefined) {
+        updates.push('category = ?');
+        updateParams.push(body.category);
+      }
+
       updates.push('updated_at = CURRENT_TIMESTAMP');
       updateParams.push(taskId);
 

@@ -63,6 +63,9 @@ export interface Task {
   requires_dean_approval?: boolean | number;
   responsibility_model?: 'shared_deliverable' | 'individual_submissions' | 'standard';
   parent_task_id?: number | null;
+  google_form_url?: string | null;
+  assigned_members?: string[];
+  category?: string;
   drive_link?: string | null;
   action_plan?: string | null;
 }

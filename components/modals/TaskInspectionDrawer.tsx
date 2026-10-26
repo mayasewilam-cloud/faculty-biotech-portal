@@ -221,39 +221,52 @@ export const TaskInspectionDrawer: React.FC<TaskInspectionDrawerProps> = ({
           </button>
         </div>
 
-        {/* Required Form / Tracker Link Card */}
-        {task.form_link && (
+        {/* Google Form / Live Tracker Link Banner */}
+        {(task.google_form_url || task.form_link) && (
           <div
             style={{
-              padding: '14px 18px',
-              borderRadius: '10px',
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(99, 102, 241, 0.12) 100%)',
+              border: '1px solid rgba(124, 58, 237, 0.35)',
               marginBottom: '20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '12px',
+              boxShadow: '0 4px 16px rgba(124, 58, 237, 0.1)',
             }}
           >
             <div>
-              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>👉 Required Form / Live Tracker Link</span>
+              <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={18} />
+                <span>Google Form / Academic Submission Link</span>
               </div>
-              <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Please open the tracker, find your name, and update your status or add a comment.
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Click the button to open and complete the official Google Form for this directive.
               </p>
             </div>
             <a
-              href={task.form_link}
+              href={task.google_form_url || task.form_link || '#'}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-primary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#10b981', borderColor: '#10b981', textDecoration: 'none' }}
+              className="btn btn-primary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#7c3aed',
+                borderColor: '#6d28d9',
+                textDecoration: 'none',
+                fontWeight: 700,
+                padding: '8px 16px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)',
+              }}
             >
-              <ExternalLink size={14} />
-              <span>Open Link in New Tab</span>
+              <span>📝 Open Google Form</span>
+              <ExternalLink size={15} />
             </a>
           </div>
         )}
@@ -273,16 +286,30 @@ export const TaskInspectionDrawer: React.FC<TaskInspectionDrawerProps> = ({
         >
           <div>
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Assigned Faculty Member
+              Assigned Faculty Team ({Array.isArray(task.assigned_members) && task.assigned_members.length > 0 ? task.assigned_members.length : 1} Members)
             </span>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem', marginTop: '2px' }}>
-              {task.assignee_title} {task.assignee_name}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              {task.assignee_department}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+              {(Array.isArray(task.assigned_members) && task.assigned_members.length > 0 
+                ? task.assigned_members 
+                : [task.assignee_name || 'Faculty Staff']).map((name, idx) => (
+                <span
+                  key={idx}
+                  style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: 'rgba(37, 99, 235, 0.12)',
+                    color: 'var(--accent-blue)',
+                    border: '1px solid rgba(37, 99, 235, 0.3)',
+                  }}
+                >
+                  {name}
+                </span>
+              ))}
             </div>
             {task.task_owner_name && (
-              <div style={{ fontSize: '0.75rem', color: 'var(--status-progress)', fontWeight: 600, marginTop: '4px' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--status-progress)', fontWeight: 600, marginTop: '6px' }}>
                 👑 Lead: {task.task_owner_name}
               </div>
             )}

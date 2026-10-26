@@ -2,7 +2,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Task, Hat, User } from '@/types';
-import { isTaskOverdue, isTaskAwaitingDeanReview } from '@/lib/taskFilters';
+import { isTaskOverdue, isTaskAwaitingDeanReview, isUserAssignedToTask } from '@/lib/taskFilters';
+import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
+import { ManageAssigneesModal } from '@/components/modals/ManageAssigneesModal';
 import {
   Search,
   Filter,
@@ -40,6 +42,8 @@ interface TasksTableViewProps {
   onNewTaskClick: () => void;
   onOpenImportModal?: () => void;
   onDeanApprove?: (taskId: number, feedback?: string) => Promise<void> | void;
+  allUsers?: any[];
+  onRefreshTasks?: () => void;
 }
 
 function formatDateToMDY(dateStr: string | null | undefined): string {
@@ -68,10 +72,41 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
   onNewTaskClick,
   onOpenImportModal,
   onDeanApprove,
+  allUsers = [],
+  onRefreshTasks,
 }) => {
+  const isDean = useMemo(() => {
+    return (
+      currentUser?.role === 'admin' ||
+      currentUser?.role === 'dean' ||
+      currentUser?.role === 'vice_dean' ||
+      currentUser?.id === 99 ||
+      currentUser?.id === 6496 ||
+      currentUser?.id === 6591
+    );
+  }, [currentUser]);
+
   const [search, setSearch] = useState('');
-  const [selectedHat, setSelectedHat] = useState<number | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [scopeFilter, setScopeFilter] = useState<'my_tasks' | 'all_tasks'>(isDean ? 'all_tasks' : 'my_tasks');
+  const [manageAssigneesTask, setManageAssigneesTask] = useState<Task | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>(statusFilter || 'all');
+
+  const handleSaveAssignees = async (taskId: number, newMembers: string[]) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assigned_members: newMembers,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to update task assignees');
+      if (onRefreshTasks) onRefreshTasks();
+    } catch (err: any) {
+      alert(err.message || 'Error updating assignees');
+    }
+  };
 
   React.useEffect(() => {
     if (statusFilter !== undefined) {
@@ -91,17 +126,6 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [sortField, setSortField] = useState<'tr' | 'deadline' | 'title' | 'status' | 'owner' | 'priority'>('tr');
   const [sortAsc, setSortAsc] = useState(true);
-
-  const isDean = useMemo(() => {
-    return (
-      currentUser?.role === 'admin' ||
-      currentUser?.role === 'dean' ||
-      currentUser?.role === 'vice_dean' ||
-      currentUser?.id === 99 ||
-      currentUser?.id === 6496 ||
-      currentUser?.id === 6591
-    );
-  }, [currentUser]);
 
   // Unique departments for filter
   const departments = useMemo(() => {
@@ -135,17 +159,13 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
   const filteredTasks = useMemo(() => {
     const now = new Date();
     return tasks.filter(t => {
-      // 0. Privacy guard for normal members
-      if (!isDean && currentUser) {
-        const isRelated =
-          t.assigned_to_id === currentUser.id ||
-          t.task_owner_id === currentUser.id ||
-          t.assigned_by_id === currentUser.id;
-        if (!isRelated) return false;
+      // 0. Scope filter: Personal queue vs All college directives
+      if (scopeFilter === 'my_tasks' && currentUser) {
+        if (!isUserAssignedToTask(t, currentUser)) return false;
       }
 
-      // Hat Filter
-      if (selectedHat !== 'all' && t.hat_id !== selectedHat) return false;
+      // Category Filter (Fall 2026 Categories)
+      if (selectedCategory !== 'all' && t.category !== selectedCategory) return false;
 
       // Status Filter
       if (selectedStatus === 'done' && t.status !== 'done') return false;
@@ -176,10 +196,11 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
         const matchDesc = (t.description || '').toLowerCase().includes(q);
         const matchAssignee = (t.assignee_name || '').toLowerCase().includes(q);
         const matchOwner = (t.task_owner_name || '').toLowerCase().includes(q);
-        const matchHat = (t.hat_name || '').toLowerCase().includes(q);
+        const matchCategory = (t.category || '').toLowerCase().includes(q);
+        const matchMembers = (t.assigned_members || []).some((m: string) => m.toLowerCase().includes(q));
         const matchTr = t.tr ? String(t.tr).includes(q) : false;
         const matchNotes = (t.completion_notes || '').toLowerCase().includes(q);
-        if (!matchTitle && !matchDesc && !matchAssignee && !matchOwner && !matchHat && !matchTr && !matchNotes) {
+        if (!matchTitle && !matchDesc && !matchAssignee && !matchOwner && !matchCategory && !matchMembers && !matchTr && !matchNotes) {
           return false;
         }
       }
@@ -205,7 +226,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
       }
       return sortAsc ? cmp : -cmp;
     });
-  }, [tasks, isDean, currentUser, selectedHat, selectedStatus, selectedDept, selectedPriority, selectedOwner, selectedAssignee, search, sortField, sortAsc]);
+  }, [tasks, isDean, currentUser, scopeFilter, selectedCategory, selectedStatus, selectedDept, selectedPriority, selectedOwner, selectedAssignee, search, sortField, sortAsc]);
 
   const handleExportSpreadsheet = () => {
     const headers = [
@@ -332,6 +353,33 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
           </div>
         </div>
 
+        {/* Center-Right: Scope Filter Toggle (My Assigned Tasks vs All College Directives) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 1 }}>
+          <button
+            type="button"
+            onClick={() => setScopeFilter('my_tasks')}
+            className={`btn btn-sm ${scopeFilter === 'my_tasks' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontWeight: 800, padding: '7px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+          >
+            <span>👤 My Assigned Tasks</span>
+            <span style={{ padding: '1px 7px', borderRadius: '999px', fontSize: '0.72rem', backgroundColor: scopeFilter === 'my_tasks' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)', color: scopeFilter === 'my_tasks' ? '#fff' : 'var(--accent-blue)' }}>
+              {tasks.filter(t => isUserAssignedToTask(t, currentUser)).length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setScopeFilter('all_tasks')}
+            className={`btn btn-sm ${scopeFilter === 'all_tasks' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontWeight: 800, padding: '7px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+          >
+            <span>🌐 All College Directives</span>
+            <span style={{ padding: '1px 7px', borderRadius: '999px', fontSize: '0.72rem', backgroundColor: scopeFilter === 'all_tasks' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)', color: scopeFilter === 'all_tasks' ? '#fff' : 'var(--accent-blue)' }}>
+              {tasks.length}
+            </span>
+          </button>
+        </div>
+
         {/* Right: Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', zIndex: 1 }}>
           {onOpenImportModal && isDean && (
@@ -392,18 +440,18 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
           />
         </div>
 
-        {/* Hat Filter */}
+        {/* Academic Category Filter (Fall 2026) */}
         <div>
           <select
             className="form-input"
-            value={selectedHat}
-            onChange={(e) => setSelectedHat(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
             style={{ fontSize: '0.84rem', height: '38px' }}
           >
-            <option value="all">🎩 All Faculty Hats ({hats.length})</option>
-            {hats.map(h => (
-              <option key={h.id} value={h.id}>
-                {h.icon || '🎓'} {h.name}
+            <option value="all">📂 All Academic Categories ({FALL_2026_CATEGORIES.length})</option>
+            {FALL_2026_CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>
+                {cat}
               </option>
             ))}
           </select>
@@ -500,11 +548,11 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
         </div>
 
         {/* Reset Filter Button */}
-        {(selectedHat !== 'all' || selectedStatus !== 'all' || selectedDept !== 'all' || selectedPriority !== 'all' || selectedOwner !== 'all' || selectedAssignee !== 'all' || search) && (
+        {(selectedCategory !== 'all' || selectedStatus !== 'all' || selectedDept !== 'all' || selectedPriority !== 'all' || selectedOwner !== 'all' || selectedAssignee !== 'all' || search) && (
           <div>
             <button
               onClick={() => {
-                setSelectedHat('all');
+                setSelectedCategory('all');
                 handleStatusChange('all');
                 setSelectedDept('all');
                 setSelectedPriority('all');
@@ -539,7 +587,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
               <span>
                 Tasks assigned to <strong style={{ color: 'var(--text-main)' }}>{selectedAssignee}</strong>: <strong style={{ color: 'var(--accent-blue)' }}>{filteredTasks.length} task{filteredTasks.length === 1 ? '' : 's'}</strong>
               </span>
-            ) : search.trim() || selectedHat !== 'all' || selectedStatus !== 'all' || selectedDept !== 'all' || selectedPriority !== 'all' || selectedOwner !== 'all' ? (
+            ) : search.trim() || selectedCategory !== 'all' || selectedStatus !== 'all' || selectedDept !== 'all' || selectedPriority !== 'all' || selectedOwner !== 'all' ? (
               <span>
                 Showing <strong style={{ color: 'var(--text-main)' }}>{filteredTasks.length}</strong> matching task{filteredTasks.length === 1 ? '' : 's'} <span style={{ color: 'var(--text-muted)' }}>({tasks.length} total across all staff)</span>
               </span>
@@ -665,7 +713,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                   </div>
                 </th>
 
-                {/* Faculty Hat */}
+                {/* Academic Category */}
                 <th
                   style={{
                     padding: '14px 16px',
@@ -677,7 +725,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  Faculty Hat (Category)
+                  Academic Category
                 </th>
 
                 {/* Task Owner */}
@@ -774,7 +822,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                   <td colSpan={10} style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>📂</div>
                     <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-main)' }}>No Tasks Match Your Active Filters</div>
-                    <div style={{ fontSize: '0.85rem', marginTop: '6px' }}>Try resetting your search query or switching to All Hats.</div>
+                    <div style={{ fontSize: '0.85rem', marginTop: '6px' }}>Try resetting your search query or switching to All Categories.</div>
                   </td>
                 </tr>
               ) : (
@@ -1058,25 +1106,25 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                         {statusBadge}
                       </td>
 
-                      {/* Faculty Hat */}
+                      {/* Academic Category */}
                       <td style={{ padding: '16px' }}>
                         <span
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            padding: '3px 10px',
+                            padding: '4px 12px',
                             borderRadius: '999px',
-                            backgroundColor: 'rgba(139, 92, 246, 0.12)',
-                            color: task.hat_color || '#a855f7',
-                            border: `1px solid ${task.hat_color ? `${task.hat_color}40` : 'rgba(139, 92, 246, 0.3)'}`,
+                            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                            color: 'var(--accent-blue)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
                             fontSize: '0.78rem',
                             fontWeight: 700,
                             whiteSpace: 'nowrap'
                           }}
                         >
-                          <span>{task.hat_icon || '🎓'}</span>
-                          <span>{task.hat_name || 'General'}</span>
+                          <span>📂</span>
+                          <span>{task.category || 'General Directive'}</span>
                         </span>
                       </td>
 
@@ -1092,32 +1140,71 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
 
                       {/* Responsible Staff */}
                       <td style={{ padding: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div
-                            style={{
-                              width: '30px',
-                              height: '30px',
-                              borderRadius: '50%',
-                              backgroundColor: 'var(--accent-blue)',
-                              color: '#ffffff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 800,
-                              fontSize: '0.76rem',
-                              flexShrink: 0
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div
+                              style={{
+                                width: '30px',
+                                height: '30px',
+                                borderRadius: '50%',
+                                backgroundColor: 'var(--accent-blue)',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
+                                fontSize: '0.76rem',
+                                flexShrink: 0
+                              }}
+                            >
+                              {(task.assignee_name || 'U').charAt(0)}
+                            </div>
+                            <div style={{ overflow: 'hidden' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                {task.assignee_name || 'Unassigned'}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                {task.assignee_department || task.department || 'Academic Staff'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Multiple Assigned Members Pills */}
+                          {task.assigned_members && task.assigned_members.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '240px' }}>
+                              {task.assigned_members.map((member, mIdx) => (
+                                <span
+                                  key={mIdx}
+                                  style={{
+                                    fontSize: '0.7rem',
+                                    padding: '1px 6px',
+                                    borderRadius: '999px',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    color: 'var(--text-main)',
+                                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {member}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Quick Team Management Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setManageAssigneesTask(task);
                             }}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, width: 'fit-content' }}
+                            title="Add or remove team members for this task"
                           >
-                            {(task.assignee_name || 'U').charAt(0)}
-                          </div>
-                          <div style={{ overflow: 'hidden' }}>
-                            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                              {task.assignee_name || 'Unassigned'}
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                              {task.assignee_department || task.department || 'Academic Staff'}
-                            </div>
-                          </div>
+                            <span>👥 Edit Team ({task.assigned_members?.length || 1})</span>
+                          </button>
                         </div>
                       </td>
 
@@ -1139,6 +1226,32 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                       {/* Deliverables & Drive */}
                       <td style={{ padding: '16px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          {task.google_form_url ? (
+                            <a
+                              href={task.google_form_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '4px 9px',
+                                borderRadius: '6px',
+                                backgroundColor: 'rgba(99, 102, 241, 0.16)',
+                                border: '1px solid rgba(99, 102, 241, 0.4)',
+                                color: '#818cf8',
+                                textDecoration: 'none',
+                                fontWeight: 800,
+                                fontSize: '0.76rem',
+                                width: 'fit-content'
+                              }}
+                              title="Open Google Form for this Task"
+                            >
+                              <span>📝 Open Google Form</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          ) : null}
                           {task.drive_link ? (
                             <a
                               href={task.drive_link}
@@ -1296,6 +1409,17 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Interactive Modal to Include/Exclude Task Team Members */}
+      {manageAssigneesTask && (
+        <ManageAssigneesModal
+          isOpen={!!manageAssigneesTask}
+          task={manageAssigneesTask}
+          allUsers={allUsers}
+          onClose={() => setManageAssigneesTask(null)}
+          onSave={handleSaveAssignees}
+        />
+      )}
     </div>
   );
 };

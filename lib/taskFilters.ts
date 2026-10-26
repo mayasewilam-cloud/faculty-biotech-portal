@@ -26,30 +26,76 @@ export function isTaskAwaitingDeanReview(task: Task): boolean {
 }
 
 /**
+ * Single source of truth for matching any assigned member to a task
+ * Supports direct ID, email, assignee_name, and multi-member assigned_members array
+ */
+export function isUserAssignedToTask(task: Task, user: User | null): boolean {
+  if (!user) return false;
+
+  // 1. Direct ID matching (assigned_to, owner, or creator)
+  if (task.assigned_to_id === user.id || task.task_owner_id === user.id || task.assigned_by_id === user.id) {
+    return true;
+  }
+
+  const userFullName = (user.full_name || '').toLowerCase().trim();
+  const userEmail = (user.email || '').toLowerCase().trim();
+
+  // 2. Direct Assignee Name or Email
+  if (task.assignee_email && userEmail && task.assignee_email.toLowerCase() === userEmail) {
+    return true;
+  }
+  if (task.assignee_name && userFullName) {
+    const aLower = task.assignee_name.toLowerCase().trim();
+    if (aLower === userFullName || aLower.includes(userFullName) || userFullName.includes(aLower)) {
+      return true;
+    }
+  }
+
+  // 3. Multi-Member assigned_members array or JSON/comma string
+  if (task.assigned_members) {
+    let members: string[] = [];
+    if (Array.isArray(task.assigned_members)) {
+      members = task.assigned_members;
+    } else if (typeof task.assigned_members === 'string') {
+      try {
+        const parsed = JSON.parse(task.assigned_members);
+        if (Array.isArray(parsed)) members = parsed;
+        else members = (task.assigned_members as string).split(',').map((s) => s.trim());
+      } catch {
+        members = (task.assigned_members as string).split(',').map((s) => s.trim());
+      }
+    }
+
+    const uClean = userFullName.replace(/^(prof\.|dr\.|la\.|ta\.|ms\.|mrs\.|mr\.)\s*/, '').trim();
+
+    for (const m of members) {
+      if (!m) continue;
+      const mLower = m.toLowerCase().trim();
+      if (mLower === userFullName || userFullName.includes(mLower) || mLower.includes(userFullName)) {
+        return true;
+      }
+      const mClean = mLower.replace(/^(prof\.|dr\.|la\.|ta\.|ms\.|mrs\.|mr\.)\s*/, '').trim();
+      if (mClean && uClean && (mClean === uClean || mClean.includes(uClean) || uClean.includes(mClean))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * Filter tasks by user role & privacy permissions:
  * - Dean / Admin / Leadership: Sees all institutional tasks
- * - Regular faculty members: Only see tasks assigned to them, created by them, or owned by them
+ * - Regular faculty members: Only see tasks assigned to them (multi-member dispatch supported)
  */
 export function filterTasksByScope(tasks: Task[], currentUser: User | null, isDean: boolean): Task[] {
   if (isDean || !currentUser) return tasks;
-  return tasks.filter(
-    (t) =>
-      t.assigned_to_id === currentUser.id ||
-      t.task_owner_id === currentUser.id ||
-      t.assigned_by_id === currentUser.id
-  );
+  return tasks.filter((t) => isUserAssignedToTask(t, currentUser));
 }
 
 /**
  * Single source of truth for filtering tasks by status:
- * Supported statuses:
- * - 'all': All tasks
- * - 'done': Completed deliverables
- * - 'awaiting_dean': Completed deliverables awaiting Dean sign-off
- * - 'in_progress': Active tasks currently in progress
- * - 'pending': Tasks not started yet and not overdue
- * - 'overdue': Tasks past their deadline
- * - 'revision_requested': Tasks returned with Dean revision directives
  */
 export function filterTasksByStatus(tasks: Task[], statusFilter: string, now: Date = new Date()): Task[] {
   if (!statusFilter || statusFilter === 'all') return tasks;
@@ -96,7 +142,7 @@ export function calculateTaskMetrics(
   isDean: boolean,
   now: Date = new Date()
 ): TaskMetrics {
-  // 1. Role scope (prevent cross-user leak for normal faculty members)
+  // 1. Role scope (strictly scopes to user's assigned tasks for staff)
   const scoped = filterTasksByScope(tasks, currentUser, isDean);
   // 2. Ignore sub-tasks in high-level KPI cards to prevent count inflation
   const topTasks = scoped.filter((t) => !t.parent_task_id);

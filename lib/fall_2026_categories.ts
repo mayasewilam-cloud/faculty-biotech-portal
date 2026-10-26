@@ -1,0 +1,18 @@
+export const FALL_2026_CATEGORIES = [
+  'Schedules, Load & Faculty Board',
+  'Folders & Books Tasks',
+  'Oracle Tasks',
+  'Registration Tasks',
+  'Quality Assurance (FDLQ)',
+  'Committee Tasks',
+  'Competitions & Conference Tasks',
+  'Research Team',
+  'Ushers, Course Drive, Assessment Map',
+  'Clubs, Campaigns & Conference',
+  'On Probation Student Support (OPSS)',
+  'Family Leader',
+  'Miscellaneous Tasks',
+  'Laboratory & Inventory Tasks',
+  'Master Degree Tasks',
+  'Graduation Project Tasks',
+];

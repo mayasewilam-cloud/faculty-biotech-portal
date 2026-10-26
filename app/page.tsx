@@ -53,7 +53,7 @@ import {
 
 import { User, Task, Hat, HatMember, ActivityLog, AnalyticsData, Meeting, FacultyCommittee, DeanAvailabilitySlot } from '@/types';
 import { INSTITUTIONAL_PILLARS } from '@/lib/pillar_catalog';
-import { isTaskOverdue, isTaskAwaitingDeanReview } from '@/lib/taskFilters';
+import { isTaskOverdue, isTaskAwaitingDeanReview, isUserAssignedToTask } from '@/lib/taskFilters';
 import { Header } from '@/components/navigation/Header';
 import { AnalyticsView } from '@/components/views/AnalyticsView';
 import { LogsView } from '@/components/views/LogsView';
@@ -284,6 +284,8 @@ export default function DashboardPage() {
   // Task Dispatch Form State (Supports Single, Hat Group, Multi-Selected, Department-wide, or Broadcast)
   const [dispatchMode, setDispatchMode] = useState<'single' | 'committee' | 'hat' | 'selected' | 'department' | 'all'>('single');
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskCategory, setNewTaskCategory] = useState<string>('Schedules, Load & Faculty Board');
+  const [newTaskGoogleFormUrl, setNewTaskGoogleFormUrl] = useState<string>('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskAssigneeId, setNewTaskAssigneeId] = useState<number | ''>('');
   const [selectedRecipients, setSelectedRecipients] = useState<number[]>([]);
@@ -1128,6 +1130,8 @@ export default function DashboardPage() {
             assigned_to_id: newTaskAssigneeId,
             priority: newTaskPriority,
             deadline: new Date(newTaskDeadline).toISOString(),
+            category: newTaskCategory,
+            google_form_url: newTaskGoogleFormUrl || undefined,
             hat_id: targetHatId ? Number(targetHatId) : undefined,
             attachment_name: newTaskAttachment?.name || undefined,
             attachment_type: newTaskAttachment?.type || undefined,
@@ -1914,6 +1918,13 @@ export default function DashboardPage() {
     return [{ key: 'all', title: 'All Tasks', tasks: filteredTasks }];
   })();
 
+  // Compute actual assigned task count for the logged-in user
+  const myTasksCount = useMemo(() => {
+    if (!currentUser) return 0;
+    if (isDean) return tasks.length;
+    return tasks.filter(t => isUserAssignedToTask(t, currentUser)).length;
+  }, [tasks, currentUser, isDean]);
+
   if (loading || !currentUser) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2066,7 +2077,7 @@ export default function DashboardPage() {
               <FileText size={17} />
               <span>{isDean ? 'Tasks' : 'My Tasks'}</span>
               <span className="tag-cat tag-cat-prof" style={{ fontSize: '0.75rem', padding: '1px 7px' }}>
-                {tasks.length}
+                {isDean ? tasks.length : myTasksCount}
               </span>
             </button>
 
@@ -2138,29 +2149,52 @@ export default function DashboardPage() {
               <span>Calendar</span>
             </button>
 
-            {/* Staff Directory */}
-            {isDean && (
-              <button
-                onClick={() => setActiveTab('staff')}
-                style={{
-                  padding: '12px 18px',
-                  background: 'none',
-                  border: 'none',
-                  color: activeTab === 'staff' ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                  borderBottom: activeTab === 'staff' ? '2px solid var(--accent-blue)' : '2px solid transparent',
-                  fontWeight: 700,
-                  fontSize: '0.92rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <Users size={17} />
-                <span>Faculty Staff</span>
-              </button>
-            )}
+            {/* Staff Directory (Available to all faculty) */}
+            <button
+              onClick={() => setActiveTab('staff')}
+              style={{
+                padding: '12px 18px',
+                background: 'none',
+                border: 'none',
+                color: activeTab === 'staff' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                borderBottom: activeTab === 'staff' ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                fontWeight: 700,
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Users size={17} />
+              <span>Faculty Staff</span>
+            </button>
+
+            {/* Master Audit Trail (Who did what and when) */}
+            <button
+              onClick={() => {
+                setActiveTab('logs');
+                fetchLogs();
+              }}
+              style={{
+                padding: '12px 18px',
+                background: 'none',
+                border: 'none',
+                color: activeTab === 'logs' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                borderBottom: activeTab === 'logs' ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                fontWeight: 700,
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <History size={17} />
+              <span>Master Audit Trail</span>
+            </button>
           </div>
 
           {/* Clean Primary Action */}
@@ -2242,7 +2276,9 @@ export default function DashboardPage() {
         {/* TAB 1: TASKS & COMPLIANCE MATRIX (Excel-Style Table View) */}
         {activeTab === 'tasks' && (
           <TasksTableView
-            tasks={isDean ? tasks : tasks.filter(t => t.assigned_to_id === currentUser?.id || t.task_owner_id === currentUser?.id || t.assigned_by_id === currentUser?.id)}
+            tasks={tasks}
+            allUsers={allUsers}
+            onRefreshTasks={fetchTasks}
             hats={hats}
             currentUser={currentUser}
             statusFilter={statusFilter}
@@ -2515,8 +2551,8 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* TAB: AUDIT LOGS & ACCOUNTABILITY TRAIL (Dean Only) */}
-        {activeTab === 'logs' && isDean && (
+        {/* TAB: MASTER AUDIT TRAIL (Who did what and when) */}
+        {activeTab === 'logs' && (
           <LogsView
             logs={logs}
             logSearch={logSearch}
@@ -2608,6 +2644,10 @@ export default function DashboardPage() {
         setTargetDept={setTargetDept}
         recipientSearch={recipientSearch}
         setRecipientSearch={setRecipientSearch}
+        newTaskCategory={newTaskCategory}
+        setNewTaskCategory={setNewTaskCategory}
+        newTaskGoogleFormUrl={newTaskGoogleFormUrl}
+        setNewTaskGoogleFormUrl={setNewTaskGoogleFormUrl}
         newTaskTitle={newTaskTitle}
         setNewTaskTitle={setNewTaskTitle}
         newTaskPriority={newTaskPriority}
@@ -2712,13 +2752,7 @@ export default function DashboardPage() {
 
       {/* MODAL 3: TASK & GOVERNANCE INSPECTION DRAWER */}
       <TaskInspectionDrawer
-        task={
-          selectedTask &&
-          !isUpdateTaskOpen &&
-          (isDean || selectedTask.task_owner_id === currentUser?.id || selectedTask.assigned_by_id === currentUser?.id)
-            ? selectedTask
-            : null
-        }
+        task={selectedTask && !isUpdateTaskOpen ? selectedTask : null}
         onClose={() => setSelectedTask(null)}
         onDeanAcknowledge={handleDeanAcknowledge}
         onRequestRevision={handleRequestRevision}

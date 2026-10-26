@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Hat, User, FacultyCommittee } from '@/types';
 import { Users2, Paperclip, FileText, Send, Sparkles } from 'lucide-react';
+import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
 import { INSTITUTIONAL_PILLARS, PillarTaskTemplate } from '@/lib/pillar_catalog';
 import { getSubTasksForHat } from '@/lib/hat_tasks_catalog';
 import { FileUploadZone } from '@/components/common/FileUploadZone';
@@ -41,6 +42,10 @@ interface NewTaskModalProps {
   setNewTaskDescription: (desc: string) => void;
   newTaskAssigneeId: number | '';
   setNewTaskAssigneeId: (id: number) => void;
+  newTaskCategory?: string;
+  setNewTaskCategory?: (val: string) => void;
+  newTaskGoogleFormUrl?: string;
+  setNewTaskGoogleFormUrl?: (val: string) => void;
   newTaskAttachment: {
     name: string;
     type: string;
@@ -100,6 +105,10 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
   setNewTaskDescription,
   newTaskAssigneeId,
   setNewTaskAssigneeId,
+  newTaskCategory = 'Schedules, Load & Faculty Board',
+  setNewTaskCategory,
+  newTaskGoogleFormUrl = '',
+  setNewTaskGoogleFormUrl,
   newTaskAttachment,
   setNewTaskAttachment,
   handleFileChange,
@@ -816,164 +825,58 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
             </div>
           )}
 
-          {/* 12-Pillar Catalog Quick Selector */}
-          <div style={{
-            padding: '14px 16px',
-            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.08))',
-            border: '1px solid rgba(59, 130, 246, 0.25)',
-            borderRadius: '10px',
-            marginBottom: '16px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={16} /> Choose from Official 12-Pillar Academic Catalog
-              </span>
-              {selectedTemplateId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedPillarCode('');
-                    setSelectedTemplateId('');
-                  }}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer' }}
-                >
-                  Clear Selection ✕
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Step 1: Institutional Pillar (A–L)
-                </label>
-                <select
-                  className="form-select"
-                  style={{ fontSize: '0.8rem', height: '36px' }}
-                  value={selectedPillarCode}
-                  onChange={(e) => {
-                    setSelectedPillarCode(e.target.value);
-                    setSelectedTemplateId('');
-                  }}
-                >
-                  <option value="">-- Select Academic Pillar --</option>
-                  {INSTITUTIONAL_PILLARS.map(p => (
-                    <option key={p.code} value={p.code}>
-                      {p.icon} Pillar {p.code}: {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Step 2: Official Catalog Task
-                </label>
-                <select
-                  className="form-select"
-                  style={{ fontSize: '0.8rem', height: '36px' }}
-                  value={selectedTemplateId}
-                  disabled={!selectedPillarCode}
-                  onChange={(e) => {
-                    const tId = e.target.value;
-                    setSelectedTemplateId(tId);
-                    const pillar = INSTITUTIONAL_PILLARS.find(p => p.code === selectedPillarCode);
-                    const template = pillar?.tasks.find(t => t.id === tId);
-                    if (template) {
-                      handleSelectTemplate(template);
-                    }
-                  }}
-                >
-                  <option value="">{selectedPillarCode ? '-- Choose Task Template --' : 'Select Pillar first'}</option>
-                  {selectedPillarCode && INSTITUTIONAL_PILLARS.find(p => p.code === selectedPillarCode)?.tasks.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {selectedTemplateId && (
-              <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>✓ Title, instructions, suggested priority & deadline have been autofilled below.</span>
-              </div>
-            )}
+          {/* Official Academic Category (Fall 2026 Allocation) */}
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Academic Task Category *</span>
+              <span style={{ fontSize: '0.74rem', color: 'var(--accent-blue)', fontWeight: 700 }}>16 Official Fall 2026 Categories</span>
+            </label>
+            <select
+              className="form-select"
+              value={newTaskCategory}
+              onChange={(e) => setNewTaskCategory && setNewTaskCategory(e.target.value)}
+              style={{ fontSize: '0.86rem', height: '38px' }}
+            >
+              {FALL_2026_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  📂 {cat}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Task Title */}
-          <div className="form-group">
-            <label className="form-label">Task Title / Subject *</label>
+          {/* Task Title (Custom Directives Supported) */}
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Task Title / Directive *</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>✍️ Type any custom task title freely</span>
+            </label>
             <input
               type="text"
               className="form-input"
-              placeholder="e.g. Submit Midterm Examination Form & Grading Scheme"
+              placeholder="e.g. Midterm Exams Schedule & Examination Rosters"
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
               required
+              style={{ fontSize: '0.92rem', height: '40px' }}
             />
           </div>
 
-          {/* Associated Faculty Hat Category & Linked Specific Tasks */}
-          {dispatchMode !== 'hat' && (
-            <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Associated Faculty Hat (Category)</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400 }}>Optional</span>
-              </label>
-              <select
-                className="form-select"
-                value={targetHatId}
-                onChange={(e) => setTargetHatId(e.target.value ? Number(e.target.value) : '')}
-              >
-                <option value="">-- No specific hat (General Directive) --</option>
-                {hats.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.icon || '🎩'} {h.name}
-                  </option>
-                ))}
-              </select>
-
-              {/* Dynamic Linked Sub-Tasks based on Official Taxonomy */}
-              {(() => {
-                const chosenHat = hats.find(h => h.id === Number(targetHatId));
-                const availableSubTasks = getSubTasksForHat(chosenHat?.name);
-                if (!availableSubTasks || availableSubTasks.length === 0) return null;
-                return (
-                  <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.25)' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#c4b5fd', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                      <span>🎯</span>
-                      <span>Specific Focus Task under {chosenHat?.name}:</span>
-                    </label>
-                    <select
-                      className="form-select"
-                      style={{ fontSize: '0.82rem', height: '36px' }}
-                      defaultValue=""
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (!val) return;
-                        if (!newTaskTitle || newTaskTitle.startsWith('[')) {
-                          setNewTaskTitle(`[${val}] `);
-                        } else {
-                          setNewTaskTitle(`[${val}] ${newTaskTitle}`);
-                        }
-                      }}
-                    >
-                      <option value="">-- Choose Official Sub-Task / Focus Area ({availableSubTasks.length} available) --</option>
-                      {availableSubTasks.map(st => (
-                        <option key={st} value={st}>
-                          • {st}
-                        </option>
-                      ))}
-                    </select>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      Selecting a focus area will automatically prefix the task title for reporting and accreditation.
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
+          {/* Google Form Link (Optional) */}
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>📝 Google Form Link (Optional)</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Adds a direct &quot;Open Google Form&quot; button</span>
+            </label>
+            <input
+              type="url"
+              className="form-input"
+              placeholder="https://docs.google.com/forms/d/e/.../viewform"
+              value={newTaskGoogleFormUrl}
+              onChange={(e) => setNewTaskGoogleFormUrl && setNewTaskGoogleFormUrl(e.target.value)}
+              style={{ fontSize: '0.85rem', height: '38px' }}
+            />
+          </div>
 
           {/* Priority & Deadline Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>

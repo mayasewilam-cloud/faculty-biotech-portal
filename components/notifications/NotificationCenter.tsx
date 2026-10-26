@@ -18,6 +18,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { playNotificationChime } from '@/lib/audioChime';
+import { isUserAssignedToTask } from '@/lib/taskFilters';
 
 interface NotificationItem {
   id: string;
@@ -87,10 +88,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     const now = new Date();
     const fortyEightHoursFromNow = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
-    // 1. Process tasks relevant to current user
+    // 1. Process tasks relevant to current user (supports multi-assignee tasks)
     const relevantTasks = isDean
       ? tasks
-      : tasks.filter((t) => t.assigned_to_id === currentUser?.id);
+      : tasks.filter((t) => isUserAssignedToTask(t, currentUser));
 
     relevantTasks.forEach((t) => {
       const deadlineDate = t.deadline ? new Date(t.deadline) : null;
