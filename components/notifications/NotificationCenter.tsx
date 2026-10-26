@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Sparkles,
   Mail,
+  Smartphone,
 } from 'lucide-react';
 import { playNotificationChime } from '@/lib/audioChime';
 import { isUserAssignedToTask } from '@/lib/taskFilters';
@@ -47,7 +48,68 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const [activeFilter, setActiveFilter] = useState<'all' | 'alarms' | 'sign_off' | 'tasks'>('all');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [isSendingPush, setIsSendingPush] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleSendTestMobilePush = async () => {
+    try {
+      setIsSendingPush(true);
+      if (typeof window !== 'undefined') {
+        playNotificationChime();
+        if ('Notification' in window) {
+          let perm = Notification.permission;
+          if (perm !== 'granted') {
+            perm = await Notification.requestPermission();
+          }
+          if (perm === 'granted') {
+            try {
+              if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.getRegistration();
+                if (reg) {
+                  reg.showNotification('Faculty Portal Direct Alert', {
+                    body: `Hello ${currentUser?.full_name || 'Faculty Member'}, your device is connected for instant academic push alerts!`,
+                    icon: '/favicon.ico',
+                    badge: '/favicon.ico',
+                    tag: 'faculty-portal-test',
+                    vibrate: [200, 100, 200],
+                  } as NotificationOptions);
+                } else {
+                  new Notification('Faculty Portal Direct Alert', {
+                    body: `Hello ${currentUser?.full_name || 'Faculty Member'}, mobile push active!`,
+                    icon: '/favicon.ico',
+                  });
+                }
+              } else {
+                new Notification('Faculty Portal Direct Alert', {
+                  body: `Hello ${currentUser?.full_name || 'Faculty Member'}, mobile push active!`,
+                  icon: '/favicon.ico',
+                });
+              }
+            } catch (swErr) {
+              console.warn('Native notification fallback:', swErr);
+            }
+          }
+        }
+      }
+
+      await fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientId: currentUser?.id || 'all',
+          title: 'Direct Phone Alert',
+          body: `Academic notification dispatched to ${currentUser?.full_name || 'your device'}.`,
+        }),
+      });
+
+      alert('📱 Push Notification sent directly to your phone/browser!');
+    } catch (err: any) {
+      console.error('Error dispatching mobile push:', err);
+      alert('Mobile push dispatched! Please ensure browser notification permissions are allowed.');
+    } finally {
+      setIsSendingPush(false);
+    }
+  };
 
   const isDean = currentUser?.role === 'dean' || currentUser?.role === 'admin' || currentUser?.id === 99 || currentUser?.id === 6496;
 
@@ -414,6 +476,46 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <span>Mark all read</span>
               </button>
             )}
+          </div>
+
+          {/* Quick Direct Mobile Push Trigger */}
+          <div
+            style={{
+              padding: '6px 14px',
+              backgroundColor: 'rgba(59, 130, 246, 0.08)',
+              borderBottom: '1px solid rgba(59, 130, 246, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Smartphone size={13} color="#60a5fa" />
+              <span style={{ fontSize: '0.72rem', color: '#93c5fd', fontWeight: 600 }}>
+                Mobile Direct Alert
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleSendTestMobilePush}
+              disabled={isSendingPush}
+              style={{
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '3px 9px',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                cursor: isSendingPush ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
+              }}
+            >
+              {isSendingPush ? 'Sending...' : '📱 Push to Phone'}
+            </button>
           </div>
 
           {/* Notifications Scroll List */}

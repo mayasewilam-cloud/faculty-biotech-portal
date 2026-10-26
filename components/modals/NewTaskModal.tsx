@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Hat, User, FacultyCommittee } from '@/types';
 import { Users2, Paperclip, FileText, Send, Sparkles } from 'lucide-react';
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
+import { FALL_2026_TASK_ROSTER } from '@/lib/fall_2026_tasks_roster';
 import { INSTITUTIONAL_PILLARS, PillarTaskTemplate } from '@/lib/pillar_catalog';
 import { FileUploadZone } from '@/components/common/FileUploadZone';
 
@@ -130,6 +131,48 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [committeeTaskChoice, setCommitteeTaskChoice] = useState<string>('');
   const [customCommitteeTask, setCustomCommitteeTask] = useState<string>('');
+  const [selectedTaskTemplate, setSelectedTaskTemplate] = useState<string>('');
+  const [memberToAdd, setMemberToAdd] = useState<string>('');
+
+  const handleSelectDirectiveTemplate = (title: string) => {
+    setSelectedTaskTemplate(title);
+    if (!title || title === 'custom') {
+      setNewTaskTitle('');
+      return;
+    }
+
+    setNewTaskTitle(title);
+    const directive = FALL_2026_TASK_ROSTER.find(t => t.title.toLowerCase().trim() === title.toLowerCase().trim());
+    if (directive) {
+      if (directive.priority && setNewTaskPriority) {
+        setNewTaskPriority(directive.priority as any);
+      }
+      if (directive.deadline && setNewTaskDeadline) {
+        setNewTaskDeadline(directive.deadline.slice(0, 10));
+      }
+      if (directive.google_form_url && setNewTaskGoogleFormUrl) {
+        setNewTaskGoogleFormUrl(directive.google_form_url);
+      }
+
+      // Match member names against allUsers
+      const matchedUserIds: number[] = [];
+      for (const mName of directive.members) {
+        const cleanM = mName.toLowerCase().replace(/^(prof\.|dr\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.)\s*/, '').trim();
+        const found = allUsers.find(u => {
+          const uClean = u.full_name.toLowerCase().replace(/^(prof\.|dr\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.)\s*/, '').trim();
+          return cleanM.includes(uClean) || uClean.includes(cleanM);
+        });
+        if (found && !matchedUserIds.includes(found.id)) {
+          matchedUserIds.push(found.id);
+        }
+      }
+
+      if (matchedUserIds.length > 0) {
+        setSelectedRecipients(matchedUserIds);
+        setDispatchMode('selected');
+      }
+    }
+  };
 
   const handleSelectTemplate = (template: PillarTaskTemplate) => {
     setNewTaskTitle(template.title);
@@ -741,41 +784,161 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
             </div>
           )}
 
-          {/* Official Academic Category (Fall 2026 Allocation) */}
+          {/* Task Directive Dropdown Selection */}
           <div className="form-group" style={{ marginBottom: '16px' }}>
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Academic Task Category *</span>
-              <span style={{ fontSize: '0.74rem', color: 'var(--accent-blue)', fontWeight: 700 }}>16 Official Fall 2026 Categories</span>
+              <span>📋 Select Task Directive *</span>
+              <span style={{ fontSize: '0.74rem', color: 'var(--accent-blue)', fontWeight: 700 }}>
+                {FALL_2026_TASK_ROSTER.length} Official Directives
+              </span>
             </label>
             <select
               className="form-select"
-              value={newTaskCategory}
-              onChange={(e) => setNewTaskCategory && setNewTaskCategory(e.target.value)}
-              style={{ fontSize: '0.86rem', height: '38px' }}
+              value={selectedTaskTemplate}
+              onChange={(e) => handleSelectDirectiveTemplate(e.target.value)}
+              style={{ fontSize: '0.9rem', height: '42px', fontWeight: 600 }}
             >
-              {FALL_2026_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  📂 {cat}
-                </option>
-              ))}
+              <option value="">-- Choose a Task from Fall 2026 Allocation --</option>
+              <option value="custom">✍️ Custom Task (Type New Title)</option>
+              <optgroup label="📋 Fall 2026 Tasks Allocation">
+                {FALL_2026_TASK_ROSTER.map((t) => (
+                  <option key={t.title} value={t.title}>
+                    📌 {t.title} ({t.members.length} member{t.members.length === 1 ? '' : 's'})
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
 
-          {/* Task Title (Custom Directives Supported) */}
+          {/* Task Title (Editable freely or Auto-filled) */}
           <div className="form-group" style={{ marginBottom: '16px' }}>
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Task Title / Directive *</span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>✍️ Type any custom task title freely</span>
+              <span>Task Title / Directive Name *</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>✍️ Edit or type custom title</span>
             </label>
             <input
               type="text"
               className="form-input"
               placeholder="e.g. Midterm Exams Schedule & Examination Rosters"
               value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
+              onChange={(e) => {
+                setNewTaskTitle(e.target.value);
+                if (selectedTaskTemplate !== 'custom' && selectedTaskTemplate !== e.target.value) {
+                  setSelectedTaskTemplate('custom');
+                }
+              }}
               required
               style={{ fontSize: '0.92rem', height: '40px' }}
             />
+          </div>
+
+          {/* Interactive Member Management Roster (Included/Excluded Members) */}
+          <div className="form-group" style={{ marginBottom: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <label className="form-label" style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem' }}>
+                👥 Assigned Members ({selectedRecipients.length} Selected)
+              </label>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Toggle ✕ to remove or use dropdown below to add
+              </span>
+            </div>
+
+            {/* Member Badges with Remove Toggles */}
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '6px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              backgroundColor: 'var(--bg-inset)',
+              border: '1px solid var(--border)',
+              minHeight: '48px',
+              alignItems: 'center',
+            }}>
+              {selectedRecipients.length === 0 ? (
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No members assigned yet. Choose a task template above or add members below.
+                </span>
+              ) : (
+                selectedRecipients.map((id) => {
+                  const u = allUsers.find(user => user.id === id);
+                  return (
+                    <span
+                      key={id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid rgba(59, 130, 246, 0.35)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span>👤 {u ? `${u.title ? u.title + ' ' : ''}${u.full_name}` : `Staff #${id}`}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRecipients(prev => prev.filter(x => x !== id))}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: '0 2px',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                        }}
+                        title="Remove member from this task"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Add Member Dropdown */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <select
+                className="form-select"
+                value={memberToAdd}
+                onChange={(e) => setMemberToAdd(e.target.value)}
+                style={{ fontSize: '0.84rem', height: '36px', flex: 1 }}
+              >
+                <option value="">➕ Add someone new to this task...</option>
+                {allUsers
+                  .filter(u => u.role !== 'dean' && !selectedRecipients.includes(u.id))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.title ? u.title + ' ' : ''}{u.full_name} ({u.department})
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={!memberToAdd}
+                onClick={() => {
+                  if (memberToAdd) {
+                    const uid = Number(memberToAdd);
+                    if (!selectedRecipients.includes(uid)) {
+                      setSelectedRecipients(prev => [...prev, uid]);
+                      setDispatchMode('selected');
+                    }
+                    setMemberToAdd('');
+                  }
+                }}
+                style={{ fontWeight: 700, padding: '0 14px' }}
+              >
+                Add Member
+              </button>
+            </div>
           </div>
 
           {/* Google Form Link (Optional) */}

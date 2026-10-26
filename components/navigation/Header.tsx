@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Task, ActivityLog } from '@/types';
-import { Sun, Moon, LogOut, Smartphone, UserCheck, Key } from 'lucide-react';
+import { Sun, Moon, LogOut, Smartphone, UserCheck, Key, BellRing } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { playNotificationChime } from '@/lib/audioChime';
 
 interface HeaderProps {
   currentUser: User | null;
@@ -58,6 +59,65 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleMobilePreview,
   onChangePassword,
 }) => {
+  const [isSendingPush, setIsSendingPush] = useState(false);
+
+  const handleSendPushToPhone = async () => {
+    try {
+      setIsSendingPush(true);
+      if (typeof window !== 'undefined') {
+        playNotificationChime();
+        if ('Notification' in window) {
+          let perm = Notification.permission;
+          if (perm !== 'granted') {
+            perm = await Notification.requestPermission();
+          }
+          if (perm === 'granted') {
+            if ('serviceWorker' in navigator) {
+              const reg = await navigator.serviceWorker.getRegistration();
+              if (reg) {
+                reg.showNotification('Faculty of Biotechnology Portal', {
+                  body: `Hello ${currentUser?.full_name || 'Prof. Dr. Gehan'}! Your phone is now actively receiving real-time task directives and Dean announcements.`,
+                  icon: '/icon-192.png',
+                  badge: '/icon-192.png',
+                  vibrate: [200, 100, 200],
+                  tag: 'faculty-phone-alert',
+                } as any);
+              } else {
+                new Notification('Faculty of Biotechnology Portal', {
+                  body: `Hello ${currentUser?.full_name || 'Prof. Dr. Gehan'}! Your phone alert system is connected.`,
+                  icon: '/icon-192.png',
+                });
+              }
+            } else {
+              new Notification('Faculty of Biotechnology Portal', {
+                body: `Hello ${currentUser?.full_name || 'Prof. Dr. Gehan'}! Direct alert dispatched successfully.`,
+              });
+            }
+          } else {
+            alert('Please allow Notifications in your mobile browser settings to receive alerts directly on your device.');
+            return;
+          }
+        }
+      }
+
+      await fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Direct Faculty Mobile Alert',
+          body: `Live mobile push sent directly to ${currentUser?.full_name || 'your device'}.`,
+          userId: currentUser?.id,
+        }),
+      });
+
+      alert('🔔 Live notification sent directly to your phone screen!');
+    } catch (e: any) {
+      alert('Notification notice: ' + e.message);
+    } finally {
+      setIsSendingPush(false);
+    }
+  };
+
   return (
     <header
       className="dashboard-header"
@@ -141,6 +201,31 @@ export const Header: React.FC<HeaderProps> = ({
               ({currentUser?.title || currentUser?.role || 'Staff'})
             </span>
           </div>
+
+          {/* Direct Mobile Phone Notification Button */}
+          <button
+            type="button"
+            onClick={handleSendPushToPhone}
+            disabled={isSendingPush}
+            className="btn btn-secondary btn-sm"
+            title="Push Notification Directly to My Phone Screen"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              padding: '6px 11px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              borderColor: 'rgba(16, 185, 129, 0.35)',
+              color: '#10b981',
+              cursor: 'pointer',
+            }}
+          >
+            <BellRing size={15} color="#10b981" />
+            <span>{isSendingPush ? 'Sending...' : 'Push to Phone'}</span>
+          </button>
 
           {/* Real-time In-App Notification Center */}
           <NotificationCenter
