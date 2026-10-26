@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { User, Task, ActivityLog } from '@/types';
-import { Sun, Moon, LogOut, Smartphone, UserCheck } from 'lucide-react';
+import { Sun, Moon, LogOut, Smartphone, UserCheck, Key } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
 interface HeaderProps {
@@ -22,13 +22,14 @@ interface HeaderProps {
   raN112Users: any[];
   prototypingRaUsers: any[];
   adminCadreUsers: any[];
-  onSwitchUser: (userId: number) => void;
-  onRevertAdmin: () => void;
+  onSwitchUser?: (userId: number) => void;
+  onRevertAdmin?: () => void;
   tasks?: Task[];
   logs?: ActivityLog[];
   onSelectTask?: (task: Task) => void;
   isMobilePreview?: boolean;
   onToggleMobilePreview?: () => void;
+  onChangePassword?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -55,6 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTask,
   isMobilePreview = false,
   onToggleMobilePreview,
+  onChangePassword,
 }) => {
   return (
     <header
@@ -120,111 +122,25 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Clean Controls & Actions */}
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Account Switcher (For Super Admin) - Clean & Minimal */}
-          {isSuperAdmin ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'var(--bg-inset)',
-                padding: '3px 8px',
-                borderRadius: '8px',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <UserCheck size={14} style={{ color: 'var(--text-secondary)' }} />
-              <select
-                className="form-select"
-                style={{
-                  padding: '3px 6px',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-main)',
-                  cursor: 'pointer',
-                  maxWidth: '220px',
-                  outline: 'none',
-                }}
-                value={currentUser?.id}
-                onChange={(e) => onSwitchUser(Number(e.target.value))}
-                title="Switch active user view"
-              >
-                <option value={currentUser?.id}>
-                  {currentUser?.full_name || 'Select Account'}
-                </option>
-                <optgroup label="Leadership">
-                  {leadershipUsers.filter((u) => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name} ({u.title || u.role})
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`Professors & Assoc. Professors (${profUsers.length})`}>
-                  {profUsers.filter((u) => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`Lecturers (${drUsers.length})`}>
-                  {drUsers.filter((u) => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`Teaching Staff & RAs (${laUsers.length + taUsers.length + raN112Users.length + prototypingRaUsers.length})`}>
-                  {[...laUsers, ...taUsers, ...raN112Users, ...prototypingRaUsers]
-                    .filter((u) => u.id !== currentUser?.id)
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.full_name} — {u.title || 'Staff'}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label={`Academic Administration (${adminCadreUsers.length})`}>
-                  {adminCadreUsers.filter((u) => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </div>
-          ) : isImpersonating ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'rgba(37, 99, 235, 0.1)',
-                padding: '4px 10px',
-                borderRadius: '8px',
-                border: '1px solid rgba(37, 99, 235, 0.3)',
-              }}
-            >
-              <span style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
-                {currentUser?.full_name}
-              </span>
-              <button
-                onClick={onRevertAdmin}
-                style={{
-                  background: 'var(--accent-blue)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Exit
-              </button>
-            </div>
-          ) : null}
+          {/* Active Logged-in User Badge */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'var(--bg-inset)',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              {currentUser?.full_name || 'Faculty Member'}
+            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              ({currentUser?.title || currentUser?.role || 'Staff'})
+            </span>
+          </div>
 
           {/* Real-time In-App Notification Center */}
           <NotificationCenter
@@ -309,6 +225,26 @@ export const Header: React.FC<HeaderProps> = ({
                     .toUpperCase()
                 : 'U'}
             </div>
+
+            {onChangePassword && (
+              <button
+                onClick={onChangePassword}
+                className="btn btn-secondary btn-sm"
+                title="Change Password"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '6px 8px',
+                  color: 'var(--accent-blue)',
+                  borderColor: 'transparent',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                }}
+              >
+                <Key size={16} />
+              </button>
+            )}
 
             <button
               onClick={onLogout}

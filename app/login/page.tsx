@@ -2,19 +2,33 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Lock, Mail, ArrowRight, Sun, Moon, Sparkles, Search } from 'lucide-react';
-import { ALL_FACULTY_STAFF } from '@/lib/public_staff';
+import { Shield, Lock, Mail, ArrowRight, Sun, Moon, Key, UserPlus, CheckCircle2, AlertCircle, User as UserIcon } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<'signin' | 'set_password' | 'register'>('signin');
+  
+  // Sign In State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Set Password State
+  const [setPasswordEmail, setSetPasswordEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Register State
+  const [registerName, setRegisterName] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerTitle, setRegisterTitle] = useState('Assistant Lecturer');
+  const [registerDept, setRegisterDept] = useState('Faculty of Biotechnology');
+  const [registerPassword, setRegisterPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const [staffSearch, setStaffSearch] = useState('');
 
-  // Initialize theme from localStorage or document attribute
   useEffect(() => {
     const saved = localStorage.getItem('faculty_theme') as 'dark' | 'light' | null;
     const current = document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null;
@@ -30,16 +44,18 @@ export default function LoginPage() {
     document.documentElement.setAttribute('data-theme', nextTheme);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // 1. Handle Sign In
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
       const data = await res.json();
@@ -56,27 +72,96 @@ export default function LoginPage() {
     }
   };
 
-  const filteredStaff = ALL_FACULTY_STAFF.filter(s => {
-    if (!staffSearch.trim()) return true;
-    const q = staffSearch.toLowerCase();
-    return (
-      s.full_name.toLowerCase().includes(q) ||
-      s.email.toLowerCase().includes(q) ||
-      (s.rank && s.rank.toLowerCase().includes(q)) ||
-      (s.ar_name && s.ar_name.includes(staffSearch.trim())) ||
-      (s.rank_ar && s.rank_ar.includes(staffSearch.trim())) ||
-      s.title.toLowerCase().includes(q)
-    );
-  });
+  // 2. Handle Set / Create Password
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
 
-  const leadershipStaff = filteredStaff.filter(s => s.category === 'leadership');
-  const professorStaff = filteredStaff.filter(s => s.category === 'professors');
-  const doctorStaff = filteredStaff.filter(s => s.category === 'doctors');
-  const laStaff = filteredStaff.filter(s => s.category === 'la');
-  const taStaff = filteredStaff.filter(s => s.category === 'ta');
-  const raN112Staff = filteredStaff.filter(s => s.category === 'ra_n112');
-  const prototypingRaStaff = filteredStaff.filter(s => s.category === 'prototyping_ra');
-  const adminStaff = filteredStaff.filter(s => s.category === 'administration');
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match. Please re-enter.');
+      setLoading(false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'set_password',
+          email: setPasswordEmail.trim(),
+          password: newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to configure password');
+      }
+
+      setSuccess('Your password has been configured! Redirecting to portal...');
+      setTimeout(() => {
+        router.push('/');
+        router.refresh();
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Handle Register
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    if (registerPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'register',
+          email: registerEmail.trim(),
+          password: registerPassword,
+          full_name: registerName.trim(),
+          title: registerTitle.trim(),
+          department: registerDept.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      setSuccess('Account created successfully! Redirecting...');
+      setTimeout(() => {
+        router.push('/');
+        router.refresh();
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{
@@ -88,7 +173,7 @@ export default function LoginPage() {
       padding: '24px 16px',
       position: 'relative',
     }}>
-      {/* Top Bar with Theme Toggle */}
+      {/* Theme Toggle */}
       <div style={{
         position: 'absolute',
         top: '20px',
@@ -126,9 +211,9 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <div style={{ width: '100%', maxWidth: '480px' }}>
-        {/* Brand Header with Official Logos */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+      <div style={{ width: '100%', maxWidth: '440px' }}>
+        {/* Brand Header */}
+        <div style={{ textAlign: 'center', marginBottom: '22px' }}>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -137,232 +222,410 @@ export default function LoginPage() {
             padding: '12px 22px',
             borderRadius: '20px',
             background: 'rgba(255, 255, 255, 0.98)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.22), 0 0 20px rgba(245, 158, 11, 0.15)',
-            marginBottom: '18px',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.22)',
+            marginBottom: '16px',
           }}>
             <img
               src="/logos/msa-university.jpeg"
               alt="MSA University"
-              style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '52px', width: 'auto', objectFit: 'contain' }}
             />
-            <div style={{ width: '1px', height: '44px', background: '#cbd5e1' }}></div>
+            <div style={{ width: '1px', height: '40px', background: '#cbd5e1' }}></div>
             <img
               src="/logos/faculty-of-biotechnology.jpeg"
               alt="Faculty of Biotechnology"
-              style={{ height: '56px', width: 'auto', objectFit: 'contain', borderRadius: '50%' }}
+              style={{ height: '52px', width: 'auto', objectFit: 'contain' }}
             />
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '4px', letterSpacing: '-0.01em', color: 'var(--text-main)' }}>
-            MSA UNIVERSITY
+
+          <h1 style={{
+            fontSize: '1.45rem',
+            fontWeight: 800,
+            color: 'var(--text-main)',
+            letterSpacing: '-0.02em',
+            marginBottom: '4px',
+          }}>
+            Faculty of Biotechnology
           </h1>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--accent-gold)', marginBottom: '6px', letterSpacing: '0.02em' }}>
-            FACULTY OF BIOTECHNOLOGY
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.825rem' }}>
-            Executive Governance & Academic Task Management System
+          <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)' }}>
+            MSA University Academic Staff & Governance Portal
           </p>
         </div>
 
-        {/* Login Card */}
-        <div className="glass-card" style={{ padding: '32px 28px' }}>
+        {/* Auth Mode Tabs */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '6px',
+          background: 'var(--bg-inset)',
+          padding: '4px',
+          borderRadius: '12px',
+          marginBottom: '16px',
+          border: '1px solid var(--border)',
+        }}>
+          <button
+            type="button"
+            onClick={() => { setMode('signin'); setError(''); setSuccess(''); }}
+            style={{
+              padding: '8px 12px',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              background: mode === 'signin' ? 'var(--accent-blue)' : 'transparent',
+              color: mode === 'signin' ? '#ffffff' : 'var(--text-secondary)',
+              transition: 'all 0.2s',
+            }}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('set_password'); setError(''); setSuccess(''); }}
+            style={{
+              padding: '8px 12px',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              background: mode === 'set_password' ? 'var(--accent-blue)' : 'transparent',
+              color: mode === 'set_password' ? '#ffffff' : 'var(--text-secondary)',
+              transition: 'all 0.2s',
+            }}
+          >
+            Create / Set Password
+          </button>
+        </div>
+
+        {/* Card */}
+        <div className="card" style={{
+          padding: '28px',
+          borderRadius: '16px',
+          border: '1px solid var(--border)',
+          background: 'var(--card-bg, #111a31)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+        }}>
           {error && (
             <div style={{
-              background: 'var(--status-overdue-bg)',
-              border: '1px solid var(--status-overdue-border)',
-              color: 'var(--status-overdue)',
-              padding: '12px 16px',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              marginBottom: '20px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '10px',
+              padding: '12px 14px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#f87171',
+              fontSize: '0.85rem',
+              marginBottom: '18px',
             }}>
-              <span>⚠️</span>
-              <span>{error}</span>
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              <div>{error}</div>
             </div>
           )}
 
-          <form onSubmit={handleLogin}>
-            <div className="form-group" style={{ marginBottom: '18px' }}>
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                University Email Address
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
-                <input
-                  type="email"
-                  className="form-input"
-                  style={{ paddingLeft: '42px', width: '100%' }}
-                  placeholder="e.g. gehan.safwat@msa.edu.eg"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', margin: 0 }}>
-                  Account Password
-                </label>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Verified via Secure Backend Hash
-                </span>
-              </div>
-              <div style={{ position: 'relative' }}>
-                <Lock size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
-                <input
-                  type="password"
-                  className="form-input"
-                  style={{ paddingLeft: '42px', width: '100%' }}
-                  placeholder="Enter your confidential password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '12px', fontSize: '0.95rem', fontWeight: 700 }}
-              disabled={loading}
-            >
-              {loading ? 'Authenticating with Database...' : 'Sign In to Academic Portal'}
-              <ArrowRight size={18} />
-            </button>
-          </form>
-
-          {/* Quick Email Pre-Fill (Helper for faculty, leaves password to user input) */}
-          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{
-                fontSize: '0.75rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: 'var(--text-muted)',
-                fontWeight: 700,
-              }}>
-                Pre-Fill Account Email:
-              </span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Sparkles size={12} /> {ALL_FACULTY_STAFF.length} Faculty Accounts
-              </span>
-            </div>
-
-            {/* Search Filter for Quick Pre-fill */}
-            <div style={{ position: 'relative', marginBottom: '8px' }}>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Search all 92 staff by name, academic rank, or email..."
-                value={staffSearch}
-                onChange={(e) => setStaffSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  fontSize: '0.78rem',
-                  padding: '6px 10px 6px 28px',
-                  height: '34px',
-                  borderRadius: '8px'
-                }}
-              />
-              <Search size={14} style={{ position: 'absolute', left: '9px', top: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-            </div>
-
-            <select
-              className="form-select"
-              style={{ width: '100%', fontSize: '0.825rem', padding: '8px 12px', cursor: 'pointer' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            >
-              <option value="">-- Choose from all {filteredStaff.length} Faculty Staff Accounts --</option>
-              {leadershipStaff.length > 0 && (
-                <optgroup label={`👑 Super Administrative Leadership (${leadershipStaff.length})`}>
-                  {leadershipStaff.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.id === 99 ? '👑 Admin — Higher Super Admin' : s.id === 6496 ? '👑 Prof. Dr. Gehan Safwat — Dean of Faculty (Super Admin)' : '⭐ Prof. Dr. Amr Ageez — Vice Dean for Academic Affairs (Super Admin)'} — {s.email}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {professorStaff.length > 0 && (
-                <optgroup label={`🎓 Professors & Associate Professors (${professorStaff.length})`}>
-                  {professorStaff.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.full_name} — {s.rank} — {s.email}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {doctorStaff.length > 0 && (
-                <optgroup label={`🔬 Lecturers & Ph.D. Doctors (${doctorStaff.length})`}>
-                  {doctorStaff.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.full_name} — {s.rank} — {s.email}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {laStaff.length > 0 && (
-                <optgroup label={`🧬 Lecturer Assistants (LA) (${laStaff.length})`}>
-                  {laStaff.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.full_name} — {s.rank} — {s.email}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {taStaff.length > 0 && (
-                <optgroup label={`📚 Teaching Assistants (TA) (${taStaff.length})`}>
-                  {taStaff.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.full_name} — {s.rank} — {s.email}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {raN112Staff.length > 0 && (
-                <optgroup label={`🧪 RA N112 (${raN112Staff.length})`}>
-                  {raN112Staff.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.full_name} — {s.rank} — {s.email}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {prototypingRaStaff.length > 0 && (
-                <optgroup label={`🔬 Prototyping RA (${prototypingRaStaff.length})`}>
-                  {prototypingRaStaff.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.full_name} — {s.rank} — {s.email}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {adminStaff.length > 0 && (
-                <optgroup label={`📋 Academic Administration (${adminStaff.length})`}>
-                  {adminStaff.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.full_name} — {s.rank} — {s.email}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-
-            <p style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-muted)',
-              textAlign: 'center',
-              marginTop: '16px',
-              lineHeight: 1.5,
+          {success && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 14px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#34d399',
+              fontSize: '0.85rem',
+              marginBottom: '18px',
             }}>
-              Credentials are authenticated against the encrypted Cloudflare D1 SQL database.
-            </p>
+              <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
+              <div>{success}</div>
+            </div>
+          )}
+
+          {/* MODE 1: SIGN IN */}
+          {mode === 'signin' && (
+            <form onSubmit={handleSignIn}>
+              <div style={{ marginBottom: '16px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px' }}>
+                  Official University Email
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
+                  <input
+                    type="email"
+                    className="form-input"
+                    style={{ paddingLeft: '42px', width: '100%' }}
+                    placeholder="name@msa.edu.eg"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '22px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', margin: 0 }}>
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('set_password'); setError(''); }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-blue)',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      padding: 0,
+                    }}
+                  >
+                    Forgot / Create password?
+                  </button>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
+                  <input
+                    type="password"
+                    className="form-input"
+                    style={{ paddingLeft: '42px', width: '100%' }}
+                    placeholder="Enter your confidential password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '12px', fontSize: '0.95rem', fontWeight: 700 }}
+                disabled={loading}
+              >
+                {loading ? 'Authenticating...' : 'Sign In to Portal'}
+                <ArrowRight size={18} />
+              </button>
+            </form>
+          )}
+
+          {/* MODE 2: CREATE / SET PASSWORD */}
+          {mode === 'set_password' && (
+            <form onSubmit={handleSetPassword}>
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
+                  Create Your Password
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  Enter your official MSA email. You will choose your personal, confidential password.
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>
+                  Official University Email
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
+                  <input
+                    type="email"
+                    className="form-input"
+                    style={{ paddingLeft: '42px', width: '100%' }}
+                    placeholder="e.g. hala.khorshid@msa.edu.eg"
+                    value={setPasswordEmail}
+                    onChange={(e) => setSetPasswordEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>
+                  Choose New Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Key size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
+                  <input
+                    type="password"
+                    className="form-input"
+                    style={{ paddingLeft: '42px', width: '100%' }}
+                    placeholder="Minimum 6 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>
+                  Confirm New Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
+                  <input
+                    type="password"
+                    className="form-input"
+                    style={{ paddingLeft: '42px', width: '100%' }}
+                    placeholder="Re-type your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '12px', fontSize: '0.95rem', fontWeight: 700 }}
+                disabled={loading}
+              >
+                {loading ? 'Saving Password...' : 'Save Password & Sign In'}
+                <ArrowRight size={18} />
+              </button>
+            </form>
+          )}
+
+          {/* MODE 3: REGISTER NEW FACULTY */}
+          {mode === 'register' && (
+            <form onSubmit={handleRegister}>
+              <div style={{ marginBottom: '14px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>
+                  Full Name
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <UserIcon size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ paddingLeft: '42px', width: '100%' }}
+                    placeholder="e.g. Dr. Sarah Hassan"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>
+                  Official University Email
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
+                  <input
+                    type="email"
+                    className="form-input"
+                    style={{ paddingLeft: '42px', width: '100%' }}
+                    placeholder="sarah.hassan@msa.edu.eg"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>
+                  Academic Title / Role
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ width: '100%' }}
+                  placeholder="e.g. Lecturer, Assistant Professor, Teaching Assistant"
+                  value={registerTitle}
+                  onChange={(e) => setRegisterTitle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>
+                  Create Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '12px' }} />
+                  <input
+                    type="password"
+                    className="form-input"
+                    style={{ paddingLeft: '42px', width: '100%' }}
+                    placeholder="Minimum 6 characters"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '12px', fontSize: '0.95rem', fontWeight: 700 }}
+                disabled={loading}
+              >
+                {loading ? 'Creating Account...' : 'Register & Enter Portal'}
+                <ArrowRight size={18} />
+              </button>
+            </form>
+          )}
+
+          {/* Bottom Switch Link */}
+          <div style={{ marginTop: '18px', textAlign: 'center', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+            {mode !== 'register' ? (
+              <button
+                type="button"
+                onClick={() => { setMode('register'); setError(''); setSuccess(''); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <UserPlus size={14} color="var(--accent-blue)" />
+                New faculty member? <span style={{ color: 'var(--accent-blue)' }}>Register your account</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setMode('signin'); setError(''); setSuccess(''); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-blue)',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Back to Sign In
+              </button>
+            )}
           </div>
+        </div>
+
+        {/* Confidential Security Notice */}
+        <div style={{
+          textAlign: 'center',
+          marginTop: '18px',
+          fontSize: '0.74rem',
+          color: 'var(--text-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+        }}>
+          <Shield size={14} />
+          Confidential Faculty System • Encrypted Password Authentication
         </div>
       </div>
     </div>

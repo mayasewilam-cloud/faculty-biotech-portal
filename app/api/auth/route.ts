@@ -1,43 +1,35 @@
-
 import { NextResponse } from 'next/server';
 import { queryFirst, execute, ensureAllStaffExist } from '@/lib/db';
 import { createSession, deleteSession, getCurrentUser, getImpersonationInfo } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 
-// Helper to check if a user is one of the Super Admins
-function isSuperAdminUser(user: any): boolean {
+// Helper to check if a user is an Admin
+function isAdminUser(user: any): boolean {
   if (!user) return false;
-  return user.role === 'admin' || user.id === 99 || user.id === 6496 || user.id === 6591 || user.email === 'admin@faculty.edu' || user.email === 'gehan.safwat@msa.edu.eg' || user.email === 'amr.ageez@msa.edu.eg';
+  return user.role === 'admin' || user.id === 6496 || user.email === 'gehan.safwat@msa.edu.eg';
 }
 
-// GET /api/auth: Get current logged-in user and impersonation status
+// GET /api/auth: Get current logged-in user
 export async function GET() {
   try {
     await ensureAllStaffExist();
     const user = await getCurrentUser();
-    const { isImpersonating, adminUserId } = await getImpersonationInfo();
 
     if (!user) {
       return NextResponse.json({ user: null, isImpersonating: false });
     }
 
-    let adminUser = null;
-    if (isImpersonating && adminUserId) {
-      adminUser = await queryFirst('SELECT id, email, full_name, title, role, department, avatar FROM users WHERE id = ?', [adminUserId]);
-    }
-
     return NextResponse.json({
       user,
-      isImpersonating,
-      adminUser,
+      isImpersonating: false,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// POST /api/auth: Handles login, Super Admin account switching, and revert
+// POST /api/auth: Handles login, password setting, registration, and password changes
 export async function POST(req: Request) {
   try {
     await ensureAllStaffExist();
@@ -45,162 +37,162 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
 
     // ─────────────────────────────────────────────────────────────
-    // 1. REVERT TO SUPER ADMIN (1-click exit from impersonation)
+    // 1. DISABLE PROFILE SWITCHING / IMPERSONATION
     // ─────────────────────────────────────────────────────────────
-    if (body.action === 'revert_admin') {
-      const { isImpersonating, adminUserId } = await getImpersonationInfo();
-      const currentUser = await getCurrentUser();
-
-      if (!isImpersonating && !isSuperAdminUser(currentUser)) {
-        return NextResponse.json({ 
-          error: 'Access Denied: You are not in a Super Admin impersonation session.' 
-        }, { status: 403 });
-      }
-
-      const adminId = adminUserId || (currentUser ? currentUser.id : 99);
-      const adminUser = await queryFirst("SELECT * FROM users WHERE id = ?", [adminId]) as any;
-      if (!adminUser) {
-        return NextResponse.json({ error: 'Super Admin account not found' }, { status: 404 });
-      }
-
-      const sessionId = await createSession(adminUser.id);
-      cookieStore.set('faculty_session', sessionId, {
-        httpOnly: true,
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60,
-      });
-      cookieStore.delete('super_admin_origin');
-
-      // Audit Log for Session Restore
-      await execute(`
-        INSERT INTO activity_logs (user_id, user_name, user_role, action_type, title, details, ip_address)
-        VALUES (?, ?, ?, 'ADMIN_REVERT', 'Super Admin Restored Session', ?, '127.0.0.1')
-      `, [
-        adminUser.id,
-        adminUser.full_name,
-        adminUser.role,
-        `${adminUser.title} ${adminUser.full_name} returned from impersonation session to central command.`
-      ]);
-
-      return NextResponse.json({
-        success: true,
-        user: {
-          id: adminUser.id,
-          email: adminUser.email,
-          full_name: adminUser.full_name,
-          title: adminUser.title,
-          role: adminUser.role,
-          department: adminUser.department,
-          avatar: adminUser.avatar,
-        },
-        isImpersonating: false,
-      });
+    if (body.action === 'switch' || body.action === 'revert_admin') {
+      return NextResponse.json({ 
+        error: 'Profile switching is disabled. Each faculty member must sign in with their own password.' 
+      }, { status: 403 });
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 2. ACCOUNT ACCESS / IMPERSONATION (Strictly Super Admin ONLY)
+    // 2. CREATE / SET PASSWORD (For existing staff setting their password)
     // ─────────────────────────────────────────────────────────────
-    if (body.action === 'switch') {
-      const currentUser = await getCurrentUser();
-      const { isImpersonating, adminUserId } = await getImpersonationInfo();
-      const isAuthorized = isSuperAdminUser(currentUser) || isImpersonating;
+    if (body.action === 'set_password') {
+      const { email, password } = body;
+      if (!email || !password) {
+        return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+      }
 
-      // STRICT SECURITY BOUNDARY:
-      // Regular accounts CANNOT access other accounts or Super Admins!
-      if (!isAuthorized) {
+      if (password.length < 6) {
+        return NextResponse.json({ error: 'Password must be at least 6 characters long' }, { status: 400 });
+      }
+
+      let normalizedEmail = email.toLowerCase().trim();
+      if (normalizedEmail === 'dean@faculty.edu' || normalizedEmail === 'gehan.safwat@faculty.edu') {
+        normalizedEmail = 'gehan.safwat@msa.edu.eg';
+      }
+
+      const user = await queryFirst('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail]) as any;
+      if (!user) {
         return NextResponse.json({ 
-          error: 'Access Denied: Only Super Admins (Admin, Dean Prof. Gehan Safwat, Vice Dean Prof. Amr Ageez) have permission to access other accounts. Regular accounts cannot access other accounts.' 
-        }, { status: 403 });
+          error: 'No faculty account found with this email. Please check your spelling or register a new account.' 
+        }, { status: 404 });
       }
 
-      const targetUser = await queryFirst('SELECT * FROM users WHERE id = ?', [body.userId]) as any;
-      if (!targetUser) {
-        return NextResponse.json({ error: 'Target user account not found' }, { status: 404 });
-      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      await execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, user.id]);
 
-      const originalAdminId = adminUserId || (currentUser ? currentUser.id : 99);
-
-      // If switching directly back to one of the Super Admins
-      if (isSuperAdminUser(targetUser)) {
-        cookieStore.delete('super_admin_origin');
-        const sessionId = await createSession(targetUser.id);
-        cookieStore.set('faculty_session', sessionId, {
-          httpOnly: true,
-          path: '/',
-          maxAge: 7 * 24 * 60 * 60,
-        });
-
-        await execute(`
-          INSERT INTO activity_logs (user_id, user_name, user_role, action_type, title, details, ip_address)
-          VALUES (?, ?, 'admin', 'ADMIN_RESTORE', 'Super Admin Restored Session', ?, '127.0.0.1')
-        `, [
-          targetUser.id,
-          targetUser.full_name,
-          `${targetUser.title} ${targetUser.full_name} returned to central Super Admin session.`
-        ]);
-
-        return NextResponse.json({
-          success: true,
-          user: {
-            id: targetUser.id,
-            email: targetUser.email,
-            full_name: targetUser.full_name,
-            title: targetUser.title,
-            role: targetUser.role,
-            department: targetUser.department,
-            avatar: targetUser.avatar,
-          },
-          isImpersonating: false,
-        });
-      }
-
-      // Switching from Super Admin to a Faculty/Staff account
-      cookieStore.set('super_admin_origin', String(originalAdminId), {
-        httpOnly: true,
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60,
-      });
-
-      const sessionId = await createSession(targetUser.id);
+      // Automatically sign in the user
+      const sessionId = await createSession(user.id);
       cookieStore.set('faculty_session', sessionId, {
         httpOnly: true,
         path: '/',
         maxAge: 7 * 24 * 60 * 60,
       });
 
-      // Audit Log: Track Super Admin Access Event
       await execute(`
         INSERT INTO activity_logs (user_id, user_name, user_role, action_type, title, details, ip_address)
-        VALUES (?, 'Super Admin', 'admin', 'SUPER_ADMIN_IMPERSONATION', 'Super Admin Accessed Faculty Account', ?, '127.0.0.1')
+        VALUES (?, ?, ?, 'SET_PASSWORD', 'Password Configured', ?, '127.0.0.1')
       `, [
-        originalAdminId,
-        `Super Admin accessed the account of ${targetUser.title} ${targetUser.full_name} (${targetUser.role.toUpperCase()} — ${targetUser.department}).`
+        user.id,
+        user.full_name,
+        user.role,
+        `${user.title} ${user.full_name} created their personal portal password.`
       ]);
 
       return NextResponse.json({
         success: true,
+        message: 'Password created successfully! You are now logged in.',
         user: {
-          id: targetUser.id,
-          email: targetUser.email,
-          full_name: targetUser.full_name,
-          title: targetUser.title,
-          role: targetUser.role,
-          department: targetUser.department,
-          avatar: targetUser.avatar,
+          id: user.id,
+          email: user.email,
+          full_name: user.full_name,
+          title: user.title,
+          role: user.role,
+          department: user.department,
+          avatar: user.avatar,
         },
-        isImpersonating: true,
       });
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 3. STANDARD CREDENTIAL LOGIN
+    // 3. REGISTER NEW FACULTY ACCOUNT
+    // ─────────────────────────────────────────────────────────────
+    if (body.action === 'register') {
+      const { email, password, full_name, title, department } = body;
+      if (!email || !password || !full_name) {
+        return NextResponse.json({ error: 'Full name, email, and password are required' }, { status: 400 });
+      }
+
+      if (password.length < 6) {
+        return NextResponse.json({ error: 'Password must be at least 6 characters long' }, { status: 400 });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const existing = await queryFirst('SELECT id FROM users WHERE LOWER(email) = ?', [normalizedEmail]) as any;
+      if (existing) {
+        return NextResponse.json({ 
+          error: 'An account with this email already exists. Please use "Create / Set Password" to choose your password.' 
+        }, { status: 400 });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const res = await execute(`
+        INSERT INTO users (email, password_hash, full_name, title, role, department, avatar, created_at)
+        VALUES (?, ?, ?, ?, 'staff', ?, ?, CURRENT_TIMESTAMP)
+      `, [
+        normalizedEmail,
+        passwordHash,
+        full_name.trim(),
+        title?.trim() || 'Faculty Member',
+        department?.trim() || 'Faculty of Biotechnology',
+        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(full_name.trim())}`
+      ]);
+
+      const newUserId = (res as any).lastInsertRowid || Date.now();
+      const sessionId = await createSession(newUserId);
+      cookieStore.set('faculty_session', sessionId, {
+        httpOnly: true,
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Account registered successfully! Welcome to the Faculty Portal.',
+        user: {
+          id: newUserId,
+          email: normalizedEmail,
+          full_name: full_name.trim(),
+          title: title?.trim() || 'Faculty Member',
+          role: 'staff',
+          department: department?.trim() || 'Faculty of Biotechnology',
+        },
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. CHANGE PASSWORD (When logged in)
+    // ─────────────────────────────────────────────────────────────
+    if (body.action === 'change_password') {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        return NextResponse.json({ error: 'You must be logged in to change your password' }, { status: 401 });
+      }
+
+      const { new_password } = body;
+      if (!new_password || new_password.length < 6) {
+        return NextResponse.json({ error: 'New password must be at least 6 characters long' }, { status: 400 });
+      }
+
+      const passwordHash = await bcrypt.hash(new_password, 10);
+      await execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, currentUser.id]);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Password changed successfully!',
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. STANDARD CREDENTIAL LOGIN
     // ─────────────────────────────────────────────────────────────
     const { email, password } = body;
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    // Support university aliases
     let normalizedEmail = email.toLowerCase().trim();
     if (normalizedEmail === 'dean@faculty.edu' || normalizedEmail === 'gehan.safwat@faculty.edu') {
       normalizedEmail = 'gehan.safwat@msa.edu.eg';
@@ -208,28 +200,24 @@ export async function POST(req: Request) {
       normalizedEmail = 'amr.ageez@msa.edu.eg';
     }
 
-    const user = await queryFirst('SELECT * FROM users WHERE email = ?', [normalizedEmail]) as any;
+    const user = await queryFirst('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail]) as any;
     if (!user) {
       return NextResponse.json({ error: 'Invalid university credentials' }, { status: 401 });
     }
 
-    // Validate user credentials:
-    // Admin and Dr. Ahmed Mohamed accept 'Forall!@#123'
-    // All other faculty members must authenticate with their individual distinct password
+    // Check credentials (supports their configured password, or default Forall!@#123)
     const isSpecialForall = password === 'Forall!@#123' && (
       user.id === 99 || 
-      user.id === 12230 || 
-      user.email === 'admin@faculty.edu' || 
-      user.email === 'ahmed.mohamed@msa.edu.eg' ||
+      user.id === 6496 || 
       user.email === 'gehan.safwat@msa.edu.eg' ||
       user.role === 'admin'
     );
     const passwordValid = isSpecialForall || (user.password_hash && bcrypt.compareSync(password, user.password_hash));
     if (!passwordValid) {
-      return NextResponse.json({ error: 'Invalid university credentials' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid password. If this is your first time, click "Create / Set Password" to choose your password.' }, { status: 401 });
     }
 
-    // Clear any previous impersonation cookie on clean login
+    // Clear any previous impersonation cookie
     cookieStore.delete('super_admin_origin');
 
     const sessionId = await createSession(user.id);
@@ -239,8 +227,6 @@ export async function POST(req: Request) {
       maxAge: 7 * 24 * 60 * 60,
     });
 
-    const isSuperAdmin = isSuperAdminUser(user);
-
     // Log login event
     await execute(`
       INSERT INTO activity_logs (user_id, user_name, user_role, action_type, title, details, ip_address)
@@ -249,10 +235,8 @@ export async function POST(req: Request) {
       user.id,
       user.full_name,
       user.role,
-      isSuperAdmin ? 'Super Admin Logged In' : 'Faculty Member Logged In',
-      isSuperAdmin 
-        ? `${user.title} ${user.full_name} authenticated with Super Admin universal faculty access`
-        : `${user.title} ${user.full_name} authenticated into the portal`,
+      user.role === 'admin' ? 'Faculty Leadership Logged In' : 'Faculty Member Logged In',
+      `${user.title} ${user.full_name} authenticated into the portal`,
       '127.0.0.1'
     ]);
 

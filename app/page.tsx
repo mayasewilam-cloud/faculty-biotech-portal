@@ -47,13 +47,13 @@ import {
   Award,
   FileSpreadsheet,
   Lock,
+  Key,
   LayoutDashboard
 } from 'lucide-react';
 
 import { User, Task, Hat, HatMember, ActivityLog, AnalyticsData, Meeting, FacultyCommittee, DeanAvailabilitySlot } from '@/types';
 import { INSTITUTIONAL_PILLARS } from '@/lib/pillar_catalog';
 import { isTaskOverdue, isTaskAwaitingDeanReview } from '@/lib/taskFilters';
-import { ImpersonationBanner } from '@/components/navigation/ImpersonationBanner';
 import { Header } from '@/components/navigation/Header';
 import { AnalyticsView } from '@/components/views/AnalyticsView';
 import { LogsView } from '@/components/views/LogsView';
@@ -101,6 +101,54 @@ export default function DashboardPage() {
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [adminUser, setAdminUser] = useState<User | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  // Change Password Modal States
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [changePasswordNew, setChangePasswordNew] = useState('');
+  const [changePasswordConfirm, setChangePasswordConfirm] = useState('');
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState('');
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
+
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangePasswordError('');
+    setChangePasswordSuccess('');
+
+    if (changePasswordNew !== changePasswordConfirm) {
+      setChangePasswordError('Passwords do not match.');
+      return;
+    }
+    if (changePasswordNew.length < 6) {
+      setChangePasswordError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setChangePasswordLoading(true);
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'change_password',
+          new_password: changePasswordNew,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update password');
+      setChangePasswordSuccess('Password updated successfully!');
+      setTimeout(() => {
+        setIsChangePasswordOpen(false);
+        setChangePasswordNew('');
+        setChangePasswordConfirm('');
+        setChangePasswordSuccess('');
+      }, 1200);
+    } catch (err: any) {
+      setChangePasswordError(err.message);
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  };
 
   // Initialize theme from localStorage or document element
   useEffect(() => {
@@ -1881,33 +1929,21 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '60px' }}>
-      {/* 👑 Higher Super Admin Impersonation Session Banner */}
-      <ImpersonationBanner
-        isImpersonating={isImpersonating}
-        currentUser={currentUser}
-        adminUser={adminUser}
-        leadershipUsers={leadershipUsers}
-        profUsers={profUsers}
-        drUsers={drUsers}
-        laUsers={laUsers}
-        taUsers={taUsers}
-        raN112Users={raN112Users}
-        prototypingRaUsers={prototypingRaUsers}
-        adminCadreUsers={adminCadreUsers}
-        onSwitchUser={handleSwitchUser}
-        onRevertAdmin={handleRevertAdmin}
-      />
-
       {/* Top Navigation & Executive Header */}
       <Header
         currentUser={currentUser}
         isSuperAdmin={isSuperAdmin}
         isDean={isDean}
-        isImpersonating={isImpersonating}
+        isImpersonating={false}
         adminUser={adminUser}
         theme={theme}
         onToggleTheme={toggleTheme}
         onLogout={handleLogout}
+        onChangePassword={() => {
+          setIsChangePasswordOpen(true);
+          setChangePasswordError('');
+          setChangePasswordSuccess('');
+        }}
         leadershipUsers={leadershipUsers}
         profUsers={profUsers}
         drUsers={drUsers}
@@ -1916,8 +1952,6 @@ export default function DashboardPage() {
         raN112Users={raN112Users}
         prototypingRaUsers={prototypingRaUsers}
         adminCadreUsers={adminCadreUsers}
-        onSwitchUser={handleSwitchUser}
-        onRevertAdmin={handleRevertAdmin}
         tasks={tasks}
         logs={logs}
         onSelectTask={setSelectedTask}
@@ -2918,6 +2952,137 @@ export default function DashboardPage() {
           if (isDean) fetchLogs();
         }}
       />
+
+      {/* MODAL: CHANGE PERSONAL PASSWORD */}
+      {isChangePasswordOpen && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '16px',
+        }}>
+          <div className="modal-content" style={{
+            background: 'var(--card-bg, #111a31)',
+            border: '1px solid var(--border)',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '420px',
+            padding: '24px',
+            boxShadow: '0 24px 48px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Key size={20} color="var(--accent-blue)" />
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Change Your Password
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChangePasswordOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '1.2rem',
+                  padding: '4px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '18px' }}>
+              Logged in as <strong style={{ color: 'var(--text-main)' }}>{currentUser?.full_name}</strong> ({currentUser?.email})
+            </p>
+
+            {changePasswordError && (
+              <div style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#f87171',
+                fontSize: '0.82rem',
+                marginBottom: '14px',
+              }}>
+                {changePasswordError}
+              </div>
+            )}
+
+            {changePasswordSuccess && (
+              <div style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#34d399',
+                fontSize: '0.82rem',
+                marginBottom: '14px',
+              }}>
+                {changePasswordSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleChangePasswordSubmit}>
+              <div style={{ marginBottom: '14px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px' }}>
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  className="form-input"
+                  style={{ width: '100%' }}
+                  placeholder="Minimum 6 characters"
+                  value={changePasswordNew}
+                  onChange={(e) => setChangePasswordNew(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px' }}>
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  className="form-input"
+                  style={{ width: '100%' }}
+                  placeholder="Re-type your new password"
+                  value={changePasswordConfirm}
+                  onChange={(e) => setChangePasswordConfirm(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsChangePasswordOpen(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '8px 18px', fontSize: '0.85rem', fontWeight: 600 }}
+                  disabled={changePasswordLoading}
+                >
+                  {changePasswordLoading ? 'Saving...' : 'Save Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
