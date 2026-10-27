@@ -206,6 +206,9 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
       if (directive.google_form_url && setNewTaskGoogleFormUrl) {
         setNewTaskGoogleFormUrl(directive.google_form_url);
       }
+      if (setNewTaskDescription) {
+        setNewTaskDescription(`Official academic task directive: ${directive.title}. Please review assigned deliverables and submit on schedule.`);
+      }
 
       // Match member names against allUsers with quadruplet alias & token resolution
       const matchedUserIds: number[] = [];
@@ -228,7 +231,7 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
     setNewTaskDescription(template.description);
     setNewTaskPriority(template.suggested_priority);
     const deadlineDate = new Date(Date.now() + (template.estimated_days || 7) * 86400000);
-    const formattedDeadline = deadlineDate.toISOString().slice(0, 16);
+    const formattedDeadline = deadlineDate.toISOString().slice(0, 10);
     setNewTaskDeadline(formattedDeadline);
     if (dispatchMode === 'department' && template.suggested_department) {
       if (facultyDepartments.includes(template.suggested_department)) {
@@ -1023,11 +1026,11 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Deadline (Date & Time) *</label>
+              <label className="form-label">Deadline (Date) *</label>
               <input
-                type="datetime-local"
+                type="date"
                 className="form-input"
-                value={newTaskDeadline}
+                value={newTaskDeadline ? newTaskDeadline.slice(0, 10) : ''}
                 onChange={(e) => setNewTaskDeadline(e.target.value)}
                 required
               />
@@ -1036,14 +1039,13 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
 
           {/* Detailed Description */}
           <div className="form-group">
-            <label className="form-label">Task Instructions & Deliverables *</label>
+            <label className="form-label">Task Instructions & Deliverables</label>
             <textarea
               className="form-textarea"
               rows={4}
-              placeholder="Provide precise requirements for the faculty. Mention expected documents, evaluation criteria, or specific committee guidelines..."
+              placeholder="Provide requirements for the faculty (optional - defaults to standard task directive instructions)..."
               value={newTaskDescription}
               onChange={(e) => setNewTaskDescription(e.target.value)}
-              required
             />
           </div>
 
