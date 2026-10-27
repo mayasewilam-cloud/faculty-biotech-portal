@@ -467,37 +467,15 @@ async function ensureInitialized(): Promise<void> {
           'quality assurance awareness session for rubric design'
         ]);
 
-        // Keep real user-added tasks (not in legacy mock and not in official seed)
-        const officialTitles = new Set(FALL_2026_TASKS.map(ft => ft.title.toLowerCase().trim()));
-        const userAddedTasks = disk.tasks.filter((t: any) => {
-          const title = (t.title || '').toLowerCase().trim();
-          return !legacyMockTitles.has(title) && !officialTitles.has(title);
-        });
-
-        // Merge disk updates for official tasks (e.g. status changes, notes, attachments)
-        const officialWithUpdates = FALL_2026_TASKS.map((ft: any) => {
-          const diskMatch = disk.tasks.find((dt: any) => dt.title?.toLowerCase().trim() === ft.title.toLowerCase().trim() || dt.id === ft.id);
-          if (diskMatch) {
-            return {
-              ...ft,
-              status: diskMatch.status || ft.status,
-              completion_notes: diskMatch.completion_notes || ft.completion_notes,
-              attachment_url: diskMatch.attachment_url || ft.attachment_url,
-              attachment_name: diskMatch.attachment_name || ft.attachment_name,
-              drive_link: diskMatch.drive_link || ft.drive_link,
-              action_plan: diskMatch.action_plan || ft.action_plan,
-              google_form_url: diskMatch.google_form_url || ft.google_form_url,
-              assigned_members: diskMatch.assigned_members || ft.assigned_members,
-              dean_acknowledged: diskMatch.dean_acknowledged ?? ft.dean_acknowledged,
-            };
-          }
-          return ft;
-        });
-
-        // Combine: official Fall 2026 tasks + newly added tasks
-        g.__memoryTasks = [...officialWithUpdates, ...userAddedTasks];
+        // Use persisted tasks (live Google Sheet tasks + portal-created tasks)
+        const isLegacy94Mock = disk.tasks.length === 94 && disk.tasks.every((t: any) => t.status === 'in_progress');
+        if (isLegacy94Mock) {
+          g.__memoryTasks = [];
+        } else {
+          g.__memoryTasks = disk.tasks;
+        }
       } else {
-        g.__memoryTasks = FALL_2026_TASKS;
+        g.__memoryTasks = [];
       }
       if (Array.isArray(disk.hats)) {
         const hasLegacyHats = disk.hats.some((h: any) => h.name === 'RA N112' || h.name === 'Prototyping RA' || h.name === 'Accreditation & Quality Assurance Committee');
@@ -945,17 +923,35 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
   // Activity Logs
   if (normalizedSql.includes('insert into activity_logs')) {
     if (!g.__memoryLogs) g.__memoryLogs = [];
-    const newLog = {
+    const newLog: any = {
       id: g.__memoryLogs.length + 1,
-      user_id: Number(params[0]),
-      user_name: String(params[1]),
-      user_role: String(params[2]),
-      action_type: String(params[3]),
-      title: String(params[4]),
-      details: String(params[5]),
-      ip_address: String(params[6] || '127.0.0.1'),
+      ip_address: '127.0.0.1',
       created_at: new Date().toISOString()
     };
+
+    const colMatch = normalizedSql.match(/insert into activity_logs\s*\((.*?)\)\s*values\s*\((.*?)\)/i);
+    if (colMatch) {
+      const cols = colMatch[1].split(',').map((c: string) => c.trim().toLowerCase());
+      const valTokens = colMatch[2].split(',').map((v: string) => v.trim());
+      let pIdx = 0;
+      cols.forEach((col: string, idx: number) => {
+        const token = valTokens[idx];
+        if (token && token.startsWith("'") && token.endsWith("'")) {
+          newLog[col] = token.slice(1, -1);
+        } else if (pIdx < params.length) {
+          newLog[col] = params[pIdx++];
+        }
+      });
+    } else {
+      newLog.user_id = Number(params[0]);
+      newLog.user_name = String(params[1]);
+      newLog.user_role = String(params[2]);
+      newLog.action_type = String(params[3]);
+      newLog.title = String(params[4]);
+      newLog.details = String(params[5]);
+      newLog.ip_address = String(params[6] || '127.0.0.1');
+    }
+
     g.__memoryLogs.unshift(newLog);
     await persistCurrentState();
     return { lastInsertRowid: newLog.id };
@@ -968,6 +964,7 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
     const newTask: any = {
       id: newId,
       status: 'pending',
+      source: 'portal',
       completion_notes: null,
       completion_url: null,
       completed_at: null,

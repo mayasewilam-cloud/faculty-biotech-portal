@@ -1,3 +1,5 @@
+import { isUserAssignedToTask } from '@/lib/taskFilters';
+import { syncTasksFromGoogleSheet } from '@/lib/sheet_sync';
 
 import { NextResponse } from 'next/server';
 import { queryAll, queryFirst, execute } from '@/lib/db';
@@ -133,11 +135,63 @@ export async function GET(req: Request) {
            ELSE 4 END,
       t.deadline ASC`;
 
-    const rawTasks = await queryAll(query, params);
+    let rawTasks = await queryAll(query, params);
+
+    // If zero tasks exist on initial startup, automatically sync from Google Sheet
+    if ((!rawTasks || rawTasks.length === 0) && (user.role === 'dean' || user.role === 'admin' || user.id === 6496)) {
+      try {
+        await syncTasksFromGoogleSheet();
+        rawTasks = await queryAll(query, params);
+      } catch (e) {
+        console.warn('Auto-sync on empty tasks notice:', e);
+      }
+    }
+
+    const isLeadership = user.role === 'dean' || user.role === 'admin' || user.role === 'vice_dean' || user.id === 99 || user.id === 6496 || user.id === 6591;
+
+    let filtered = rawTasks || [];
+
+    // Role-based visibility: non-leadership only sees their assigned tasks
+    if (!isLeadership) {
+      filtered = filtered.filter((t: any) => isUserAssignedToTask(t, user));
+    } else if (assigneeId && assigneeId !== 'all') {
+      const aId = Number(assigneeId);
+      filtered = filtered.filter((t: any) => t.assigned_to_id === aId || t.task_owner_id === aId);
+    }
+
+    // Status filter
+    if (status && status !== 'all') {
+      if (status === 'overdue') {
+        const now = new Date();
+        filtered = filtered.filter((t: any) => t.status !== 'done' && t.deadline && new Date(t.deadline) < now);
+      } else {
+        filtered = filtered.filter((t: any) => t.status === status);
+      }
+    }
+
+    // Department filter
+    if (department && department !== 'all') {
+      filtered = filtered.filter((t: any) => t.department === department || t.assignee_department === department);
+    }
+
+    // Priority filter
+    if (priority && priority !== 'all') {
+      filtered = filtered.filter((t: any) => t.priority === priority);
+    }
+
+    // Search filter
+    if (search && search.trim()) {
+      const term = search.toLowerCase().trim();
+      filtered = filtered.filter((t: any) =>
+        (t.title || '').toLowerCase().includes(term) ||
+        (t.description || '').toLowerCase().includes(term) ||
+        (t.assignee_name || '').toLowerCase().includes(term)
+      );
+    }
 
     // Enforce strict confidentiality:
     // Only the creator ("the person who wanted it"), the assignee, and the Dean/Admin can inspect private files/reports
-    const tasks = (rawTasks || []).map((t: any) => {
+    const tasks = filtered.map((t: any) => {
       const isConfidential = Boolean(t.is_confidential);
       if (isConfidential) {
         const canAccess =
@@ -214,7 +268,7 @@ export async function POST(req: Request) {
       parent_task_id,
     } = body;
 
-    let targetList = body.assigned_to_ids || body.target_user_ids || (body.assigned_to_id ? [body.assigned_to_id] : []);
+    let targetList = body.assigned_to_ids || body.target_user_ids || (body.assigned_to_id ? [body.assigned_to_id] : (body.assigned_to ? [body.assigned_to] : []));
     const assignedMembersList = Array.isArray(assigned_members) ? assigned_members : [];
 
     if ((!targetList || targetList.length === 0) && assignedMembersList.length > 0) {
@@ -257,9 +311,9 @@ export async function POST(req: Request) {
           tr, start_date, due_time, comment_type, received_by, form_link, submission_type, 
           is_confidential, request_prompt, group_id,
           task_owner_id, task_owner_name, requires_dean_approval, responsibility_model, parent_task_id,
-          drive_link, action_plan, google_form_url, assigned_members, category
+          drive_link, action_plan, google_form_url, assigned_members, category, source
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         title,
         description,
@@ -295,12 +349,13 @@ export async function POST(req: Request) {
         body.action_plan || null,
         google_form_url || null,
         assignedMembersList.length > 0 ? JSON.stringify(assignedMembersList) : JSON.stringify([assignee.full_name]),
-        category || 'General Academic Directive'
+        category || 'General Academic Directive',
+        'portal'
       ]);
 
       const taskId = result.lastInsertRowid;
 
-      // Automatically record in the Master Audit Log
+      // Record in Master Audit Log (Dean action)
       await execute(`
         INSERT INTO activity_logs (user_id, user_name, user_role, action_type, task_id, title, details, metadata, ip_address)
         VALUES (?, ?, ?, 'TASK_CREATED', ?, ?, ?, ?, ?)
@@ -322,6 +377,21 @@ export async function POST(req: Request) {
           form_link: form_link || null,
           groupId: reqGroupId
         }),
+        '127.0.0.1'
+      ]);
+
+      // Direct Assignment Alert Notification for the Assignee
+      await execute(`
+        INSERT INTO activity_logs (user_id, user_name, user_role, action_type, task_id, title, details, metadata, ip_address)
+        VALUES (?, ?, ?, 'TASK_ASSIGNED', ?, ?, ?, ?, ?)
+      `, [
+        assignee.id,
+        assignee.full_name,
+        assignee.role,
+        taskId,
+        `New Task Directive: ${title}`,
+        `Assigned by Dean Prof. Dr. Gehan Safwat. Priority: ${priority.toUpperCase()}. Due: ${new Date(deadline).toLocaleDateString('en-GB')}.`,
+        JSON.stringify({ taskId, priority, deadline, assignedBy: user.full_name }),
         '127.0.0.1'
       ]);
 

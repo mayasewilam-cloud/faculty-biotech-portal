@@ -255,12 +255,18 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
     }
 
     // A) Process existing tasks:
-    // Retain only tasks created via portal ("Insert New Task") OR valid sheet tasks.
     const newTasksList: any[] = [];
     for (const t of currentTasks) {
       const tKey = (t.title || '').toLowerCase().trim();
-      if (t.source === 'portal' || t.source === 'manual') {
-        // Portal-created task ("Insert New Task") -> ALWAYS KEEP
+      const isLegacy94Mock = Number(t.id) <= 94 && !t.source && !sheetTaskMap.has(tKey);
+      if (isLegacy94Mock) {
+        // Purge obsolete legacy mock tasks
+        continue;
+      }
+
+      if (t.source === 'portal' || t.source === 'manual' || !t.source) {
+        // Portal-created task ("Insert New Task" / manual import) -> ALWAYS KEEP!
+        t.source = 'portal';
         newTasksList.push(t);
       } else if (sheetTaskMap.has(tKey)) {
         // Task still exists in sheet: update fields while preserving portal notes/edits
@@ -277,9 +283,12 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
         if (st.comment_type && !t.comment_type) {
           t.comment_type = st.comment_type;
         }
-        // If status was already edited to 'done' in portal by Dean or owner, preserve it
         if (t.status !== 'done') {
           t.status = st.status;
+        }
+        if (t.status === 'done' && !t.dean_acknowledged) {
+          t.dean_acknowledged = 1;
+          t.completed_at = t.completed_at || new Date().toISOString();
         }
         newTasksList.push(t);
         sheetTaskMap.delete(tKey); // mark as processed
@@ -288,7 +297,6 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
         // Was synced from sheet, but was REMOVED from the sheet -> REMOVE from portal!
         removed++;
       }
-      // Any other old legacy prototype tasks not in the sheet and not from portal are pruned!
     }
 
     // B) Add new tasks that are in the sheet but not yet in the portal
@@ -309,6 +317,8 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
         start_date: st.start_date,
         due_time: st.due_time,
         status: st.status,
+        dean_acknowledged: st.status === 'done' ? 1 : 0,
+        completed_at: st.status === 'done' ? (st.deadline || new Date().toISOString()) : null,
         comment_type: st.comment_type,
         received_by: st.received_by,
         task_owner_id: st.assignee_id,

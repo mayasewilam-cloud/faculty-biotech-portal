@@ -148,9 +148,9 @@ export async function POST(req: Request) {
               title, description, assigned_by_id, assigned_to_id, department, hat_id, 
               committee_id, committee_name, priority, deadline, status, 
               attachment_name, attachment_type, attachment_size, attachment_url,
-              task_owner_id, task_owner_name, requires_dean_approval, responsibility_model, group_id
+              task_owner_id, task_owner_name, requires_dean_approval, responsibility_model, group_id, source
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, 'individual_submissions', ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, 'individual_submissions', ?, 'portal')
           `, [
             title,
             description,
@@ -185,6 +185,21 @@ export async function POST(req: Request) {
             taskId,
             `Task Dispatched to ${recipient.title} ${recipient.full_name}`,
             `Task: "${title}" with deadline ${new Date(deadline).toLocaleDateString()}`,
+            JSON.stringify({ priority, department: recipient.department, groupId: campaignGroupId }),
+            '127.0.0.1'
+          ]);
+
+          // Direct recipient alert for their notification feed
+          await execute(`
+            INSERT INTO activity_logs (user_id, user_name, user_role, action_type, task_id, title, details, metadata, ip_address)
+            VALUES (?, ?, ?, 'TASK_ASSIGNED', ?, ?, ?, ?, ?)
+          `, [
+            recipient.id,
+            recipient.full_name,
+            recipient.role,
+            taskId,
+            `New Task Directive: ${title}`,
+            `Assigned by Dean Prof. Dr. Gehan Safwat. Priority: ${priority.toUpperCase()}. Due: ${new Date(deadline).toLocaleDateString('en-GB')}.`,
             JSON.stringify({ priority, department: recipient.department, groupId: campaignGroupId }),
             '127.0.0.1'
           ]);
@@ -299,9 +314,9 @@ export async function POST(req: Request) {
           await execute(`
             INSERT INTO tasks (
               tr, title, description, assigned_by_id, assigned_to_id, department, 
-              priority, deadline, status, hat_id, completion_notes, created_at, updated_at
+              priority, deadline, status, hat_id, completion_notes, created_at, updated_at, source
             )
-            VALUES (?, ?, ?, ?, ?, ?, 'medium', ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, 'medium', ?, ?, ?, ?, ?, ?, 'portal')
           `, [
             tr ? Number(tr) : null,
             title.trim(),

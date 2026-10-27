@@ -196,24 +196,32 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         });
       }
 
-      // Recent task assignments (< 5 days)
-      const createdDate = t.created_at ? new Date(t.created_at) : null;
-      if (createdDate && now.getTime() - createdDate.getTime() < 5 * 24 * 60 * 60 * 1000) {
+      // Active task assignment for user
+      if (t.status !== 'done') {
         list.push({
           id: `task-assigned-${t.id}`,
           type: 'assignment',
           title: `Task Mandate: ${t.title}`,
           description: `Priority ${(t.priority || 'medium').toUpperCase()} • Due: ${deadlineDate ? deadlineDate.toLocaleDateString('en-GB') : 'Open'}`,
-          timestamp: t.created_at,
+          timestamp: t.created_at || t.updated_at || new Date().toISOString(),
           task: t,
           severity: t.priority === 'urgent' ? 'urgent' : 'info',
         });
       }
     });
 
-    // 2. Add recent high-priority activity logs (< 3 days)
-    logs.slice(0, 8).forEach((l) => {
-      if (l.action_type === 'EMAIL_DISPATCHED') {
+    // 2. Add recent activity logs (including direct TASK_ASSIGNED alerts)
+    logs.slice(0, 15).forEach((l) => {
+      if (l.action_type === 'TASK_ASSIGNED' && (l.user_id === currentUser?.id || isDean)) {
+        list.push({
+          id: `log-task-assigned-${l.id}`,
+          type: 'assignment',
+          title: l.title,
+          description: l.details || 'New task directive assigned.',
+          timestamp: l.created_at || new Date().toISOString(),
+          severity: 'urgent',
+        });
+      } else if (l.action_type === 'EMAIL_DISPATCHED') {
         list.push({
           id: `log-email-${l.id}`,
           type: 'log',
