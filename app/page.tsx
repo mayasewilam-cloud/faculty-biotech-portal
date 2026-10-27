@@ -289,6 +289,7 @@ export default function DashboardPage() {
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskAssigneeId, setNewTaskAssigneeId] = useState<number | ''>('');
   const [selectedRecipients, setSelectedRecipients] = useState<number[]>([]);
+  const [assignedMemberNames, setAssignedMemberNames] = useState<string[]>([]);
   const [targetDept, setTargetDept] = useState('Academic Staff');
   const [recipientSearch, setRecipientSearch] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
@@ -1095,72 +1096,41 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  // Create Task (Supports Single Assignee, Multi-Selected Staff, Department, or Broadcast)
+  // Create Task (Supports Single Assignee, Multi-Member Teams, Department, or Broadcast)
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle || !newTaskTitle.trim()) {
-      alert('Please enter or select a task title');
+      alert('Please enter or select a task directive title');
       return;
     }
 
     const effectiveDescription = (newTaskDescription || '').trim() || `Official academic directive: ${newTaskTitle}. Please complete and submit deliverables by the deadline.`;
-    const effectiveDeadline = newTaskDeadline ? new Date(newTaskDeadline).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString();
+    const effectiveDeadline = newTaskDeadline ? new Date(newTaskDeadline).toISOString() : new Date(Date.now() + 14 * 86400000).toISOString();
 
-    let effectiveMode = dispatchMode;
-    let effectiveRecipients = [...selectedRecipients];
-
-    if (effectiveMode === 'single' && !newTaskAssigneeId && effectiveRecipients.length > 0) {
-      effectiveMode = 'selected';
-    } else if (effectiveMode === 'selected' && effectiveRecipients.length === 0 && newTaskAssigneeId) {
-      effectiveRecipients = [Number(newTaskAssigneeId)];
+    // Determine primary assignee ID with rock-solid fallbacks
+    let effectiveAssigneeId = newTaskAssigneeId ? Number(newTaskAssigneeId) : null;
+    if (!effectiveAssigneeId && selectedRecipients.length > 0) {
+      effectiveAssigneeId = selectedRecipients[0];
+    }
+    if (!effectiveAssigneeId) {
+      effectiveAssigneeId = currentUser?.id || 6496;
     }
 
-    if (effectiveMode === 'single' && !newTaskAssigneeId) {
-      alert('Please select an assigned staff member');
-      return;
-    }
-
-    if (effectiveMode === 'committee' && !targetCommitteeId) {
-      alert('Please select a Standing Committee');
-      return;
-    }
-
-    if (effectiveMode === 'selected' && effectiveRecipients.length === 0) {
-      alert('Please select at least one staff member from the list');
-      return;
+    // Determine assigned members list
+    let effectiveMembers = [...assignedMemberNames];
+    if (effectiveMembers.length === 0) {
+      const u = allUsers.find(x => x.id === effectiveAssigneeId);
+      if (u) {
+        effectiveMembers = [u.title ? `${u.title} ${u.full_name}` : u.full_name];
+      } else {
+        effectiveMembers = ['Prof. Dr. Gehan Safwat'];
+      }
     }
 
     setIsCreatingTask(true);
     try {
-      if (effectiveMode === 'single') {
-        const res = await fetch('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: newTaskTitle.trim(),
-            description: effectiveDescription,
-            assigned_to_id: newTaskAssigneeId,
-            priority: newTaskPriority,
-            deadline: effectiveDeadline,
-            category: newTaskCategory,
-            google_form_url: newTaskGoogleFormUrl || undefined,
-            hat_id: targetHatId ? Number(targetHatId) : undefined,
-            attachment_name: newTaskAttachment?.name || undefined,
-            attachment_type: newTaskAttachment?.type || undefined,
-            attachment_size: newTaskAttachment?.size || undefined,
-            attachment_url: newTaskAttachment?.url || newTaskAttachment?.dataUrl || undefined,
-            task_owner_id: taskOwnerId ? Number(taskOwnerId) : undefined,
-            requires_dean_approval: requiresDeanApproval ? 1 : 0,
-            responsibility_model: responsibilityModel,
-          }),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || 'Failed to dispatch task');
-        }
-      } else {
-        // Bulk dispatch to hat, selected users, department, or all staff
+      if (dispatchMode === 'department' || dispatchMode === 'all') {
+        // Bulk dispatch to department or all staff
         const res = await fetch('/api/tasks/bulk', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1170,16 +1140,13 @@ export default function DashboardPage() {
             description: effectiveDescription,
             priority: newTaskPriority,
             deadline: effectiveDeadline,
-            target_type: dispatchMode === 'department' ? 'department' : dispatchMode === 'all' ? 'all_staff' : dispatchMode === 'committee' ? 'committee' : 'selected_users',
-            target_committee_id: targetCommitteeId ? Number(targetCommitteeId) : undefined,
+            target_type: dispatchMode === 'department' ? 'department' : 'all_staff',
             target_dept: targetDept,
-            target_hat_id: targetHatId ? Number(targetHatId) : undefined,
-            user_ids: selectedRecipients,
             attachment_name: newTaskAttachment?.name || undefined,
             attachment_type: newTaskAttachment?.type || undefined,
             attachment_size: newTaskAttachment?.size || undefined,
             attachment_url: newTaskAttachment?.url || newTaskAttachment?.dataUrl || undefined,
-            task_owner_id: taskOwnerId ? Number(taskOwnerId) : undefined,
+            task_owner_id: taskOwnerId ? Number(taskOwnerId) : effectiveAssigneeId,
             requires_dean_approval: requiresDeanApproval ? 1 : 0,
             responsibility_model: responsibilityModel,
           }),
@@ -1189,6 +1156,38 @@ export default function DashboardPage() {
           const errorData = await res.json();
           throw new Error(errorData.error || 'Failed to bulk dispatch tasks');
         }
+      } else {
+        // Standard Task Dispatch (Supports Single Assignee, Roster Directives, Multi-Member Teams, and Committees)
+        const res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: newTaskTitle.trim(),
+            description: effectiveDescription,
+            assigned_to_id: effectiveAssigneeId,
+            assigned_to_ids: selectedRecipients.length > 0 ? selectedRecipients : [effectiveAssigneeId],
+            assigned_members: effectiveMembers,
+            priority: newTaskPriority,
+            deadline: effectiveDeadline,
+            category: newTaskCategory || 'Fall 2026 Academic Directives',
+            google_form_url: newTaskGoogleFormUrl || undefined,
+            hat_id: targetHatId ? Number(targetHatId) : undefined,
+            committee_id: targetCommitteeId ? Number(targetCommitteeId) : undefined,
+            attachment_name: newTaskAttachment?.name || undefined,
+            attachment_type: newTaskAttachment?.type || undefined,
+            attachment_size: newTaskAttachment?.size || undefined,
+            attachment_url: newTaskAttachment?.url || newTaskAttachment?.dataUrl || undefined,
+            task_owner_id: taskOwnerId ? Number(taskOwnerId) : effectiveAssigneeId,
+            requires_dean_approval: requiresDeanApproval ? 1 : 0,
+            responsibility_model: responsibilityModel,
+            source: 'portal',
+          }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to dispatch task');
+        }
       }
 
       setIsNewTaskOpen(false);
@@ -1196,6 +1195,7 @@ export default function DashboardPage() {
       setNewTaskDescription('');
       setNewTaskAssigneeId('');
       setSelectedRecipients([]);
+      setAssignedMemberNames([]);
       setTargetHatId('');
       setTargetCommitteeId('');
       setTaskOwnerId('');
@@ -1205,14 +1205,14 @@ export default function DashboardPage() {
       setNewTaskAttachment(null);
       setDispatchMode('single');
       await fetchData();
+      alert('Task dispatched successfully! Added to tasks list and updated overview.');
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || 'Error creating task');
     } finally {
       setIsCreatingTask(false);
     }
   };
 
-  // ── Multi-Select Helpers ─────────────────────────────────────
   const handleToggleSelectTask = (taskId: number) => {
     setSelectedTaskIds(prev => 
       prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
@@ -2652,6 +2652,8 @@ export default function DashboardPage() {
         setRequiresDeanApproval={setRequiresDeanApproval}
         selectedRecipients={selectedRecipients}
         setSelectedRecipients={setSelectedRecipients}
+        assignedMemberNames={assignedMemberNames}
+        setAssignedMemberNames={setAssignedMemberNames}
         targetDept={targetDept}
         setTargetDept={setTargetDept}
         recipientSearch={recipientSearch}

@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import { Hat, User, FacultyCommittee } from '@/types';
-import { Users2, Paperclip, FileText, Send, Sparkles } from 'lucide-react';
+import { Users2, Paperclip, FileText, Send, Sparkles, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
 import { FALL_2026_TASK_ROSTER } from '@/lib/fall_2026_tasks_roster';
 import { QUADRUPLET_ALIASES } from '@/lib/staff_seed';
+import { INSTITUTIONAL_PILLARS, PillarTaskTemplate } from '@/lib/pillar_catalog';
+import { FileUploadZone } from '@/components/common/FileUploadZone';
 
 export const formatUserDisplayName = (u?: any, fallbackId?: number) => {
   if (!u) return fallbackId ? ('Staff #' + fallbackId) : '';
@@ -19,8 +21,12 @@ export const formatUserDisplayName = (u?: any, fallbackId?: number) => {
 };
 
 export const resolveTaskMemberUser = (mName: string, users: any[]) => {
+  if (!mName) return undefined;
   const normAlpha = (t: string) => {
-    const withoutTitle = t.toLowerCase().replace(/^(prof\.|dr\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/, '');
+    if (!t) return '';
+    let withoutTitle = t.toLowerCase();
+    withoutTitle = withoutTitle.replace(/^(prof\.|dr\.|assoc\.\s*prof\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/gi, '');
+    withoutTitle = withoutTitle.replace(/^(prof\.|dr\.|assoc\.\s*prof\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/gi, '');
     return withoutTitle.replace(/[^a-z0-9]/g, '');
   };
 
@@ -41,10 +47,10 @@ export const resolveTaskMemberUser = (mName: string, users: any[]) => {
   });
   if (directMatch) return directMatch;
 
-  const mTokens = mName.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms'].includes(t));
+  const mTokens = mName.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms', 'assoc'].includes(t));
   if (mTokens.length >= 1) {
     for (const u of users) {
-      const uTokens = u.full_name.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms'].includes(t));
+      const uTokens = u.full_name.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms', 'assoc'].includes(t));
       if (mTokens.length >= 2 && uTokens.length >= 2) {
         if (mTokens[0] === uTokens[0] && (mTokens[mTokens.length - 1] === uTokens[uTokens.length - 1] || mTokens[1] === uTokens[1])) {
           return u;
@@ -58,8 +64,6 @@ export const resolveTaskMemberUser = (mName: string, users: any[]) => {
   }
   return undefined;
 };
-import { INSTITUTIONAL_PILLARS, PillarTaskTemplate } from '@/lib/pillar_catalog';
-import { FileUploadZone } from '@/components/common/FileUploadZone';
 
 interface NewTaskModalProps {
   isOpen: boolean;
@@ -81,6 +85,8 @@ interface NewTaskModalProps {
   setRequiresDeanApproval?: (val: boolean) => void;
   selectedRecipients: number[];
   setSelectedRecipients: React.Dispatch<React.SetStateAction<number[]>>;
+  assignedMemberNames?: string[];
+  setAssignedMemberNames?: React.Dispatch<React.SetStateAction<string[]>>;
   targetDept: string;
   setTargetDept: (dept: string) => void;
   recipientSearch: string;
@@ -144,6 +150,8 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
   setRequiresDeanApproval,
   selectedRecipients,
   setSelectedRecipients,
+  assignedMemberNames: propAssignedMemberNames,
+  setAssignedMemberNames: propSetAssignedMemberNames,
   targetDept,
   setTargetDept,
   recipientSearch,
@@ -158,7 +166,7 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
   setNewTaskDescription,
   newTaskAssigneeId,
   setNewTaskAssigneeId,
-  newTaskCategory = 'Schedules, Load & Faculty Board',
+  newTaskCategory = 'Fall 2026 Academic Directives',
   setNewTaskCategory,
   newTaskGoogleFormUrl = '',
   setNewTaskGoogleFormUrl,
@@ -180,17 +188,22 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
   adminCadreUsers,
   facultyDepartments,
 }) => {
-  const [selectedPillarCode, setSelectedPillarCode] = useState<string>('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [committeeTaskChoice, setCommitteeTaskChoice] = useState<string>('');
-  const [customCommitteeTask, setCustomCommitteeTask] = useState<string>('');
+  const [localMemberNames, setLocalMemberNames] = useState<string[]>([]);
+  const assignedMemberNames = propAssignedMemberNames !== undefined ? propAssignedMemberNames : localMemberNames;
+  const setAssignedMemberNames = propSetAssignedMemberNames !== undefined ? propSetAssignedMemberNames : setLocalMemberNames;
+
   const [selectedTaskTemplate, setSelectedTaskTemplate] = useState<string>('');
   const [memberToAdd, setMemberToAdd] = useState<string>('');
+  const [customMemberInput, setCustomMemberInput] = useState<string>('');
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
+  // Fall 2026 Directive Template Selection Handler
   const handleSelectDirectiveTemplate = (title: string) => {
     setSelectedTaskTemplate(title);
     if (!title || title === 'custom') {
-      setNewTaskTitle('');
+      if (title === 'custom') {
+        setNewTaskTitle('');
+      }
       return;
     }
 
@@ -210,645 +223,107 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
         setNewTaskDescription(`Official academic task directive: ${directive.title}. Please review assigned deliverables and submit on schedule.`);
       }
 
-      // Match member names against allUsers with quadruplet alias & token resolution
+      // 1. Populate all member names so every single one displays as a badge
+      const members = [...directive.members];
+      setAssignedMemberNames(members);
+
+      // 2. Resolve matching IDs
       const matchedUserIds: number[] = [];
-      for (const mName of directive.members) {
+      for (const mName of members) {
         const found = resolveTaskMemberUser(mName, allUsers);
         if (found && !matchedUserIds.includes(found.id)) {
           matchedUserIds.push(found.id);
         }
       }
 
+      setSelectedRecipients(matchedUserIds);
       if (matchedUserIds.length > 0) {
-        setSelectedRecipients(matchedUserIds);
-        setDispatchMode('selected');
+        setNewTaskAssigneeId(matchedUserIds[0]);
+      } else if (currentUser) {
+        setNewTaskAssigneeId(currentUser.id);
+      } else {
+        setNewTaskAssigneeId(6496);
       }
     }
   };
 
-  const handleSelectTemplate = (template: PillarTaskTemplate) => {
-    setNewTaskTitle(template.title);
-    setNewTaskDescription(template.description);
-    setNewTaskPriority(template.suggested_priority);
-    const deadlineDate = new Date(Date.now() + (template.estimated_days || 7) * 86400000);
-    const formattedDeadline = deadlineDate.toISOString().slice(0, 10);
-    setNewTaskDeadline(formattedDeadline);
-    if (dispatchMode === 'department' && template.suggested_department) {
-      if (facultyDepartments.includes(template.suggested_department)) {
-        setTargetDept(template.suggested_department);
+  const handleRemoveMember = (nameToRemove: string) => {
+    setAssignedMemberNames(prev => prev.filter(m => m !== nameToRemove));
+    const matched = resolveTaskMemberUser(nameToRemove, allUsers);
+    if (matched) {
+      setSelectedRecipients(prev => prev.filter(id => id !== matched.id));
+      if (newTaskAssigneeId === matched.id) {
+        const rem = selectedRecipients.filter(id => id !== matched.id);
+        setNewTaskAssigneeId(rem.length > 0 ? rem[0] : (currentUser?.id || 6496));
       }
     }
+  };
+
+  const handleAddUserMember = (uidStr: string) => {
+    if (!uidStr) return;
+    const uid = Number(uidStr);
+    const u = allUsers.find(x => x.id === uid);
+    if (!u) return;
+    const displayName = formatUserDisplayName(u);
+    setAssignedMemberNames(prev => prev.includes(displayName) ? prev : [...prev, displayName]);
+    setSelectedRecipients(prev => prev.includes(uid) ? prev : [...prev, uid]);
+    if (!newTaskAssigneeId) {
+      setNewTaskAssigneeId(uid);
+    }
+    setMemberToAdd('');
+  };
+
+  const handleAddCustomMember = () => {
+    const trimmed = customMemberInput.trim();
+    if (!trimmed) return;
+    setAssignedMemberNames(prev => prev.includes(trimmed) ? prev : [...prev, trimmed]);
+    const matched = resolveTaskMemberUser(trimmed, allUsers);
+    if (matched && !selectedRecipients.includes(matched.id)) {
+      setSelectedRecipients(prev => [...prev, matched.id]);
+      if (!newTaskAssigneeId) {
+        setNewTaskAssigneeId(matched.id);
+      }
+    }
+    setCustomMemberInput('');
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '680px', maxHeight: '92vh', overflowY: 'auto' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
           <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Dispatch Task to Faculty Member</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Task will be immediately routed to the professor's individual portal and logged in the faculty audit trail.
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>Dispatch Task Directive</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+              Select an official Fall 2026 task or type a custom directive. Immediately synchronized to the portal and audit log.
             </p>
           </div>
           <button
+            type="button"
             className="btn btn-secondary btn-sm"
             onClick={onClose}
-            style={{ padding: '4px 8px' }}
+            style={{ padding: '4px 8px', fontSize: '1rem', lineHeight: 1 }}
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={onSubmit}>
-          {/* Dispatch Mode Selector */}
-          <div className="form-group">
-            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Dispatch Target Mode</span>
-              <span style={{ fontSize: '0.75rem', color: '#60a5fa', fontWeight: 600 }}>
-                {dispatchMode === 'single' ? 'Single Staff Member' :
-                 
-                 dispatchMode === 'selected' ? `${selectedRecipients.length} Staff Selected` :
-                 dispatchMode === 'department' ? `Department: ${targetDept}` : 'All Faculty & Staff'}
-              </span>
-            </label>
-            <div className="segmented-control" style={{ marginBottom: '14px' }}>
-              <button
-                type="button"
-                className={`segmented-btn ${dispatchMode === 'single' ? 'active' : ''}`}
-                onClick={() => setDispatchMode('single')}
-              >
-                <span>👤 Single</span>
-              </button>
-              <button
-                type="button"
-                className={`segmented-btn ${dispatchMode === 'selected' ? 'active' : ''}`}
-                onClick={() => setDispatchMode('selected')}
-              >
-                <span>👥 Multiple ({selectedRecipients.length})</span>
-              </button>
-              <button
-                type="button"
-                className={`segmented-btn ${dispatchMode === 'department' ? 'active' : ''}`}
-                onClick={() => setDispatchMode('department')}
-              >
-                <span>🏢 By Dept</span>
-              </button>
-              <button
-                type="button"
-                className={`segmented-btn ${dispatchMode === 'all' ? 'active' : ''}`}
-                onClick={() => setDispatchMode('all')}
-              >
-                <span>🌐 Broadcast (All)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Mode 1: Single Assignee */}
-          {dispatchMode === 'single' && (
-            <div className="form-group">
-              <label className="form-label">Assign To Faculty Member *</label>
-              <select
-                className="form-select"
-                value={newTaskAssigneeId}
-                onChange={(e) => setNewTaskAssigneeId(Number(e.target.value))}
-                required
-              >
-                <option value="">-- Choose Faculty Member --</option>
-                <optgroup label="👑 Faculty Leadership">
-                  {leadershipUsers.filter(u => u.id !== 99 && u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      👑 {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`🏛️ Professors & Assoc. Professors (${profUsers.length})`}>
-                  {profUsers.filter(u => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      🏛️ {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`🩺 Lecturers (Dr.) (${drUsers.length})`}>
-                  {drUsers.filter(u => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      🩺 {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`🧬 Lecturer Assistants (LA) (${laUsers.length})`}>
-                  {laUsers.filter(u => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      🧬 {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`📚 Teaching Assistants (TA) (${taUsers.length})`}>
-                  {taUsers.filter(u => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      📚 {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`🧪 RA N112 (${raN112Users.length})`}>
-                  {raN112Users.filter(u => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      🔬 {u.full_name} (RA N112)
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`🔬 Prototyping RA (${prototypingRaUsers.length})`}>
-                  {prototypingRaUsers.filter(u => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      🧪 {u.full_name} (Prototyping RA)
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label={`🏢 Academic Administration (${adminCadreUsers.length})`}>
-                  {adminCadreUsers.filter(u => u.id !== currentUser?.id).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      💼 {u.full_name} — {u.title}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </div>
-          )}
-
-          {/* Mode: Committee Dispatch */}
-          {dispatchMode === 'committee' && (
-            <div className="form-group">
-              <label className="form-label">Select Official Statutory Committee *</label>
-              <select
-                className="form-select"
-                value={targetCommitteeId}
-                onChange={(e) => setTargetCommitteeId && setTargetCommitteeId(e.target.value ? Number(e.target.value) : '')}
-                required
-              >
-                <option value="">-- Choose Standing Committee --</option>
-                {committees.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.icon || '🏛️'} {c.name} ({c.members?.length || 0} appointed members)
-                  </option>
-                ))}
-              </select>
-
-              {targetCommitteeId && (
-                <div style={{ marginTop: '12px' }}>
-                  {(() => {
-                    const selComm = committees.find(c => c.id === Number(targetCommitteeId));
-                    if (!selComm) return null;
-                    return (
-                      <div style={{
-                        padding: '14px 16px',
-                        background: 'var(--bg-card)',
-                        border: '1px solid var(--border)',
-                        borderLeft: `4px solid ${selComm.color || '#3b82f6'}`,
-                        borderRadius: '10px',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>
-                            {selComm.icon || '🏛️'} {selComm.name}
-                          </span>
-                          <span style={{ fontSize: '0.75rem', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--status-progress)', padding: '2px 8px', borderRadius: '999px', fontWeight: 600 }}>
-                            {selComm.members?.length || 0} Appointed Members
-                          </span>
-                        </div>
-                        {selComm.decree_ref && (
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                            <strong>Decree Ref:</strong> {selComm.decree_ref}
-                          </div>
-                        )}
-                        {/* Statutory Committee Task Template or Custom Task Directive */}
-                        <div style={{ marginTop: '12px', marginBottom: '12px' }}>
-                          <label className="form-label" style={{ fontSize: '0.85rem', marginBottom: '6px', textTransform: 'uppercase', fontWeight: 800 }}>
-                            Choose Committee Task Template or Type Custom Below
-                          </label>
-                          <select
-                            className="form-select"
-                            value={committeeTaskChoice}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCommitteeTaskChoice(val);
-                              if (val && val !== 'custom') {
-                                setNewTaskTitle(val);
-                              } else if (val === 'custom') {
-                                setNewTaskTitle(customCommitteeTask || `[${selComm.name}] `);
-                              }
-                            }}
-                            style={{ fontSize: '0.9rem', minHeight: '40px' }}
-                          >
-                            <option value="">-- Choose Mandate or Pre-defined Committee Task --</option>
-                            <option value="custom">✍️ Type Custom Task Directive...</option>
-                            {selComm.mandates && selComm.mandates.length > 0 && (
-                              <optgroup label="📋 Statutory Mandates of this Committee">
-                                {selComm.mandates.map((m, idx) => (
-                                  <option key={idx} value={`[${selComm.name}] ${m}`}>
-                                    📌 {m}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            )}
-                            <optgroup label="🏛️ Common Statutory Deliverables">
-                              <option value={`[${selComm.name}] Prepare Official Committee Minutes of Meeting (MoM)`}>
-                                📝 Prepare Official Committee Minutes of Meeting (MoM)
-                              </option>
-                              <option value={`[${selComm.name}] Accreditation Self-Study Dossier & Evidence Collection (NAQAAE)`}>
-                                📑 Accreditation Self-Study Dossier & Evidence Collection (NAQAAE)
-                              </option>
-                              <option value={`[${selComm.name}] Semester Curriculum & Module Specifications Review`}>
-                                📚 Semester Curriculum & Module Specifications Review
-                              </option>
-                              <option value={`[${selComm.name}] Student Appeals, Complaints & Grade Petitions Audit`}>
-                                ⚖️ Student Appeals, Complaints & Grade Petitions Audit
-                              </option>
-                              <option value={`[${selComm.name}] Examination Moderation & Control Logistics Roster`}>
-                                📋 Examination Moderation & Control Logistics Roster
-                              </option>
-                              <option value={`[${selComm.name}] Laboratory Equipment & Biosafety Compliance Report`}>
-                                🧪 Laboratory Equipment & Biosafety Compliance Report
-                              </option>
-                              <option value={`[${selComm.name}] Postgraduate Theses Defense & Research Progress Follow-Up`}>
-                                🎓 Postgraduate Theses Defense & Research Progress Follow-Up
-                              </option>
-                            </optgroup>
-                          </select>
-                          {committeeTaskChoice === 'custom' && (
-                            <div style={{ marginTop: '10px', marginBottom: '8px' }}>
-                              <label className="form-label" style={{ fontSize: '0.86rem', fontWeight: 800 }}>
-                                Type Custom Committee Task Directive *
-                              </label>
-                              <input
-                                type="text"
-                                className="form-input"
-                                placeholder={`e.g. [${selComm.name}] Comprehensive Spring Audit & Action Plan`}
-                                value={customCommitteeTask}
-                                onChange={(e) => {
-                                  setCustomCommitteeTask(e.target.value);
-                                  setNewTaskTitle(e.target.value);
-                                }}
-                                required
-                                style={{ fontSize: '0.92rem', minHeight: '42px' }}
-                              />
-                            </div>
-                          )}
-                          <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                            💡 Choose an official mandate preset or select &quot;Type Custom Task Directive&quot; to write your own specific task.
-                          </span>
-                        </div>
-
-                        {/* Task Owner / Lead Selector */}
-                        <div style={{ marginTop: '12px', marginBottom: '12px' }}>
-                          <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 800 }}>
-                            Designated Task Lead / Owner (Defaults to Chair)
-                          </label>
-                          <select
-                            className="form-select"
-                            value={taskOwnerId || selComm.chair_id}
-                            onChange={(e) => setTaskOwnerId && setTaskOwnerId(e.target.value ? Number(e.target.value) : '')}
-                            style={{ fontSize: '0.85rem' }}
-                          >
-                            <option value={selComm.chair_id}>👑 Committee Chair: {selComm.chair_name} ({selComm.chair_title})</option>
-                            {selComm.rapporteur_id && selComm.rapporteur_id !== selComm.chair_id && (
-                              <option value={selComm.rapporteur_id}>📝 Rapporteur: {selComm.rapporteur_name} ({selComm.rapporteur_title})</option>
-                            )}
-                            {selComm.members?.filter(m => m.user_id !== selComm.chair_id && m.user_id !== selComm.rapporteur_id).map(m => (
-                              <option key={m.user_id} value={m.user_id}>👤 Member: {m.title} {m.name} ({m.role})</option>
-                            ))}
-                            {currentUser && (
-                              <option value={currentUser.id}>⭐ Retain Direct Ownership ({currentUser.title} {currentUser.full_name})</option>
-                            )}
-                          </select>
-                        </div>
-
-                        {/* Responsibility Model Selector */}
-                        <div style={{ marginBottom: '12px' }}>
-                          <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: '6px', textTransform: 'uppercase', fontWeight: 800 }}>
-                            Responsibility & Deliverable Model
-                          </label>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <label style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '8px',
-                              padding: '10px 12px',
-                              borderRadius: '8px',
-                              background: responsibilityModel === 'shared_deliverable' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-inset)',
-                              border: responsibilityModel === 'shared_deliverable' ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
-                              cursor: 'pointer'
-                            }}>
-                              <input
-                                type="radio"
-                                name="commRespModel"
-                                checked={responsibilityModel === 'shared_deliverable'}
-                                onChange={() => setResponsibilityModel && setResponsibilityModel('shared_deliverable')}
-                                style={{ marginTop: '3px' }}
-                              />
-                              <div>
-                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>One Shared Deliverable</div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Team submits 1 joint report</div>
-                              </div>
-                            </label>
-
-                            <label style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '8px',
-                              padding: '10px 12px',
-                              borderRadius: '8px',
-                              background: responsibilityModel === 'individual_submissions' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-inset)',
-                              border: responsibilityModel === 'individual_submissions' ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
-                              cursor: 'pointer'
-                            }}>
-                              <input
-                                type="radio"
-                                name="commRespModel"
-                                checked={responsibilityModel === 'individual_submissions'}
-                                onChange={() => setResponsibilityModel && setResponsibilityModel('individual_submissions')}
-                                style={{ marginTop: '3px' }}
-                              />
-                              <div>
-                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>Separate Submissions</div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Each member submits their own piece</div>
-                              </div>
-                            </label>
-                          </div>
-                        </div>
-
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase' }}>
-                          Task will be dispatched to committee members:
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '110px', overflowY: 'auto' }}>
-                          {selComm.members && selComm.members.length > 0 ? (
-                            selComm.members.map(m => (
-                              <span key={m.user_id} style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '0.75rem',
-                                padding: '3px 8px',
-                                borderRadius: '6px',
-                                background: 'var(--bg-inset)',
-                                border: '1px solid var(--border)'
-                              }}>
-                                <span>👤</span>
-                                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{m.title || ''} {m.name}</span>
-                                <span style={{ color: 'var(--accent-blue)', fontSize: '0.7rem' }}>({m.role})</span>
-                              </span>
-                            ))
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--status-overdue)' }}>No members appointed in this committee yet.</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Mode 3: Multi-Select Staff Members */}
-          {dispatchMode === 'selected' && (
-            <div className="form-group">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <label className="form-label" style={{ marginBottom: 0 }}>Select Faculty Recipients *</label>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className="chip-filter active-prof"
-                    onClick={() => setSelectedRecipients(profUsers.map(u => u.id))}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    🏛️ Prof ({profUsers.length})
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-filter active-dr"
-                    onClick={() => setSelectedRecipients(drUsers.map(u => u.id))}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    🩺 Dr ({drUsers.length})
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-filter active-la"
-                    onClick={() => setSelectedRecipients(laUsers.map(u => u.id))}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    🧬 LA ({laUsers.length})
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-filter active-ta"
-                    onClick={() => setSelectedRecipients(taUsers.map(u => u.id))}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    📚 TA ({taUsers.length})
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-filter active-ra-n112"
-                    onClick={() => setSelectedRecipients(raN112Users.map(u => u.id))}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    🧪 RA N112
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-filter active-proto-ra"
-                    onClick={() => setSelectedRecipients(prototypingRaUsers.map(u => u.id))}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    🔬 Prototyping RA
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-filter active-admin"
-                    onClick={() => setSelectedRecipients(adminCadreUsers.map(u => u.id))}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    🏢 Admin
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-filter active"
-                    onClick={() => setSelectedRecipients(baseUsers.filter(u => u.id !== 99 && u.id !== currentUser?.id).map(u => u.id))}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    All ({baseUsers.filter(u => u.id !== 99 && u.id !== currentUser?.id).length})
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-filter"
-                    onClick={() => setSelectedRecipients([])}
-                    style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Search staff by name or department..."
-                value={recipientSearch}
-                onChange={(e) => setRecipientSearch(e.target.value)}
-                style={{ height: '34px', fontSize: '0.8rem', marginBottom: '10px' }}
-              />
-
-              <div style={{
-                maxHeight: '180px',
-                overflowY: 'auto',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '8px',
-                background: 'var(--bg-inset)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px'
-              }}>
-                {baseUsers
-                  .filter(u => u.id !== 99 && u.id !== currentUser?.id)
-                  .filter(u => !recipientSearch || u.full_name.toLowerCase().includes(recipientSearch.toLowerCase()) || u.department.toLowerCase().includes(recipientSearch.toLowerCase()))
-                  .map((u) => {
-                    const isSelected = selectedRecipients.includes(u.id);
-                    return (
-                      <label
-                        key={u.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-card)',
-                          border: isSelected ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <input
-                            type="checkbox"
-                            className="custom-checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              setSelectedRecipients(prev =>
-                                prev.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id]
-                              );
-                            }}
-                          />
-                          <img
-                            src={u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                            alt={u.full_name}
-                            style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
-                          />
-                          <div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                              {formatUserDisplayName(u)}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                              {u.department}
-                            </div>
-                          </div>
-                        </div>
-                        <span style={{
-                          fontSize: '0.675rem',
-                          textTransform: 'uppercase',
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          background: 'var(--bg-inset)',
-                          border: '1px solid var(--border)',
-                          color: 'var(--text-secondary)'
-                        }}>
-                          {u.role}
-                        </span>
-                      </label>
-                    );
-                  })}
-              </div>
-            </div>
-          )}
-
-          {/* Mode 4: By Department */}
-          {dispatchMode === 'department' && (
-            <div className="form-group">
-              <label className="form-label">Target Academic Department *</label>
-              <select
-                className="form-select"
-                value={targetDept}
-                onChange={(e) => setTargetDept(e.target.value)}
-                required
-              >
-                {facultyDepartments.map(d => (
-                  <option key={d} value={d}>
-                    {d} ({allUsers.filter(u => u.department === d && u.role !== 'dean').length} Staff)
-                  </option>
-                ))}
-              </select>
-
-              <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                  Faculty in this department who will receive this task:
-                </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {allUsers
-                    .filter(u => u.department === targetDept && u.role !== 'dean')
-                    .map(u => (
-                      <span
-                        key={u.id}
-                        style={{
-                          fontSize: '0.75rem',
-                          background: 'rgba(59, 130, 246, 0.15)',
-                          color: '#93c5fd',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid rgba(59, 130, 246, 0.3)'
-                        }}
-                      >
-                        👤 {u.full_name} ({u.title})
-                      </span>
-                    ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Mode 5: Broadcast to Entire Faculty */}
-          {dispatchMode === 'all' && (
-            <div style={{
-              padding: '14px',
-              background: 'rgba(37, 99, 235, 0.12)',
-              border: '1px solid rgba(37, 99, 235, 0.3)',
-              borderRadius: '8px',
-              marginBottom: '16px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-blue)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '4px' }}>
-                <Users2 size={16} />
-                <span>Faculty-Wide Broadcast Dispatch</span>
-              </div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                This task will be automatically distributed to <strong>{allUsers.filter(u => u.role !== 'dean').length} faculty and staff members</strong> across all Biotechnology departments. Individual compliance and audit entries will be created for each person.
-              </p>
-            </div>
-          )}
-
-          {/* Task Directive Dropdown Selection */}
+        <form onSubmit={onSubmit} noValidate>
+          {/* 1. PRIMARY: Task Directive Preset Selection */}
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>📋 Select Task Directive *</span>
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 800 }}>
+              <span>📋 Select Task Directive</span>
               <span style={{ fontSize: '0.74rem', color: 'var(--accent-blue)', fontWeight: 700 }}>
-                {FALL_2026_TASK_ROSTER.length} Official Directives
+                {FALL_2026_TASK_ROSTER.length} Official Directives Available
               </span>
             </label>
             <select
               className="form-select"
               value={selectedTaskTemplate}
               onChange={(e) => handleSelectDirectiveTemplate(e.target.value)}
-              style={{ fontSize: '0.9rem', height: '42px', fontWeight: 600 }}
+              style={{ fontSize: '0.92rem', height: '42px', fontWeight: 600 }}
             >
               <option value="">-- Choose a Task from Fall 2026 Allocation --</option>
               <option value="custom">✍️ Custom Task (Type New Title)</option>
@@ -862,10 +337,10 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
             </select>
           </div>
 
-          {/* Task Title (Editable freely or Auto-filled) */}
+          {/* 2. Task Title / Directive Name */}
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Task Title / Directive Name *</span>
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 800 }}>
+              <span>Task Title / Directive Name</span>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>✍️ Edit or type custom title</span>
             </label>
             <input
@@ -879,23 +354,22 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
                   setSelectedTaskTemplate('custom');
                 }
               }}
-              required
               style={{ fontSize: '0.92rem', height: '40px' }}
             />
           </div>
 
-          {/* Interactive Member Management Roster (Included/Excluded Members) */}
+          {/* 3. Assigned Members Roster - Shows ALL members (Roster + Added) */}
           <div className="form-group" style={{ marginBottom: '18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <label className="form-label" style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem' }}>
-                👥 Assigned Members ({selectedRecipients.length} Selected)
+              <label className="form-label" style={{ margin: 0, fontWeight: 800, fontSize: '0.88rem' }}>
+                👥 Assigned Members ({assignedMemberNames.length} Members)
               </label>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Toggle ✕ to remove or use dropdown below to add
+                Click ✕ to remove any member, or use options below to add someone new
               </span>
             </div>
 
-            {/* Member Badges with Remove Toggles */}
+            {/* Badges container */}
             <div style={{
               display: 'flex',
               flexWrap: 'wrap',
@@ -907,95 +381,164 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
               minHeight: '48px',
               alignItems: 'center',
             }}>
-              {selectedRecipients.length === 0 ? (
+              {assignedMemberNames.length === 0 ? (
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                  No members assigned yet. Choose a task template above or add members below.
+                  No members assigned yet. Pick a task directive above or add members below.
                 </span>
               ) : (
-                selectedRecipients.map((id) => {
-                  const u = allUsers.find(user => user.id === id);
-                  return (
-                    <span
-                      key={id}
+                assignedMemberNames.map((mName, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      border: '1px solid rgba(59, 130, 246, 0.35)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span>👤 {mName}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(mName)}
                       style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        padding: '0 2px',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '6px',
-                        padding: '4px 10px',
-                        borderRadius: '999px',
-                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid rgba(59, 130, 246, 0.35)',
-                        color: 'var(--text-main)',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
                       }}
+                      title={`Remove ${mName} from this task`}
                     >
-                      <span>👤 {u ? `${u.title ? u.title + ' ' : ''}${u.full_name}` : `Staff #${id}`}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedRecipients(prev => prev.filter(x => x !== id))}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          padding: '0 2px',
-                          fontWeight: 800,
-                          fontSize: '0.85rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                        }}
-                        title="Remove member from this task"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  );
-                })
+                      ✕
+                    </button>
+                  </span>
+                ))
               )}
             </div>
 
-            {/* Add Member Dropdown */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <select
-                className="form-select"
-                value={memberToAdd}
-                onChange={(e) => setMemberToAdd(e.target.value)}
-                style={{ fontSize: '0.84rem', height: '36px', flex: 1 }}
-              >
-                <option value="">➕ Add someone new to this task...</option>
-                {allUsers
-                  .filter(u => u.role !== 'dean' && !selectedRecipients.includes(u.id))
-                  .map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.title ? u.title + ' ' : ''}{u.full_name} ({u.department})
-                    </option>
-                  ))}
-              </select>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                disabled={!memberToAdd}
-                onClick={() => {
-                  if (memberToAdd) {
-                    const uid = Number(memberToAdd);
-                    if (!selectedRecipients.includes(uid)) {
-                      setSelectedRecipients(prev => [...prev, uid]);
-                      setDispatchMode('selected');
+            {/* Add Member Controls (Dropdown + Custom Name Input) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>
+              {/* Option A: Pick registered faculty member */}
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <select
+                  className="form-select"
+                  value={memberToAdd}
+                  onChange={(e) => {
+                    setMemberToAdd(e.target.value);
+                    if (e.target.value) handleAddUserMember(e.target.value);
+                  }}
+                  style={{ fontSize: '0.82rem', height: '36px' }}
+                >
+                  <option value="">➕ Add faculty from staff directory...</option>
+                  <optgroup label="👑 Faculty Leadership">
+                    {leadershipUsers.filter(u => u.id !== 99).map(u => (
+                      <option key={u.id} value={u.id}>👑 {u.full_name} ({u.title})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={`🏛️ Professors (${profUsers.length})`}>
+                    {profUsers.map(u => (
+                      <option key={u.id} value={u.id}>🏛️ {u.full_name} ({u.department})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={`🩺 Lecturers / Dr (${drUsers.length})`}>
+                    {drUsers.map(u => (
+                      <option key={u.id} value={u.id}>🩺 {u.full_name} ({u.department})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={`🧬 Lecturer Assistants (${laUsers.length})`}>
+                    {laUsers.map(u => (
+                      <option key={u.id} value={u.id}>🧬 {u.full_name} ({u.department})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={`📚 Teaching Assistants (${taUsers.length})`}>
+                    {taUsers.map(u => (
+                      <option key={u.id} value={u.id}>📚 {u.full_name} ({u.department})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={`🧪 Research Assistants (${raN112Users.length + prototypingRaUsers.length})`}>
+                    {raN112Users.concat(prototypingRaUsers).map(u => (
+                      <option key={u.id} value={u.id}>🔬 {u.full_name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={`🏢 Academic Administration (${adminCadreUsers.length})`}>
+                    {adminCadreUsers.map(u => (
+                      <option key={u.id} value={u.id}>💼 {u.full_name}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Option B: Type custom name */}
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Or type custom member name..."
+                  value={customMemberInput}
+                  onChange={(e) => setCustomMemberInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomMember();
                     }
-                    setMemberToAdd('');
-                  }
-                }}
-                style={{ fontWeight: 700, padding: '0 14px' }}
-              >
-                Add Member
-              </button>
+                  }}
+                  style={{ fontSize: '0.82rem', height: '36px', flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleAddCustomMember}
+                  disabled={!customMemberInput.trim()}
+                  style={{ padding: '0 10px', fontWeight: 700 }}
+                >
+                  Add
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Google Form Link (Optional) */}
+          {/* 4. Priority & Deadline */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontWeight: 700 }}>Priority Level</label>
+              <select
+                className="form-select"
+                value={newTaskPriority}
+                onChange={(e: any) => setNewTaskPriority(e.target.value)}
+                style={{ height: '38px' }}
+              >
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="urgent">🚨 Urgent (Immediate Attention)</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontWeight: 700 }}>Deadline (Date)</label>
+              <input
+                type="date"
+                className="form-input"
+                value={newTaskDeadline ? newTaskDeadline.slice(0, 10) : ''}
+                onChange={(e) => setNewTaskDeadline(e.target.value)}
+                style={{ height: '38px' }}
+              />
+            </div>
+          </div>
+
+          {/* 5. Google Form Link (Optional) */}
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 700 }}>
               <span>📝 Google Form Link (Optional)</span>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Adds a direct &quot;Open Google Form&quot; button</span>
             </label>
@@ -1009,51 +552,24 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
             />
           </div>
 
-          {/* Priority & Deadline Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-            <div className="form-group">
-              <label className="form-label">Priority Level</label>
-              <select
-                className="form-select"
-                value={newTaskPriority}
-                onChange={(e: any) => setNewTaskPriority(e.target.value)}
-              >
-                <option value="low">Low Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="high">High Priority</option>
-                <option value="urgent">🚨 Urgent (Immediate Attention)</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Deadline (Date) *</label>
-              <input
-                type="date"
-                className="form-input"
-                value={newTaskDeadline ? newTaskDeadline.slice(0, 10) : ''}
-                onChange={(e) => setNewTaskDeadline(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Detailed Description */}
-          <div className="form-group">
-            <label className="form-label">Task Instructions & Deliverables</label>
+          {/* 6. Task Instructions & Deliverables */}
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label className="form-label" style={{ fontWeight: 700 }}>Task Instructions & Deliverables</label>
             <textarea
               className="form-textarea"
-              rows={4}
-              placeholder="Provide requirements for the faculty (optional - defaults to standard task directive instructions)..."
+              rows={3}
+              placeholder="Provide instructions for the faculty team..."
               value={newTaskDescription}
               onChange={(e) => setNewTaskDescription(e.target.value)}
+              style={{ fontSize: '0.85rem' }}
             />
           </div>
 
-          {/* Document & Binary Evidence Upload Zone */}
-          <div className="form-group" style={{ marginTop: '16px' }}>
+          {/* 7. Document Attachment Zone */}
+          <div className="form-group" style={{ marginBottom: '16px' }}>
             <FileUploadZone
-              label="Attach Document, Exam, or Evidence File (Drag & Drop)"
-              hint="PDF, DOCX, XLSX, PPTX, Images up to 25 MB. Automatically stored in faculty repository."
+              label="Attach Document, Exam, or Evidence File (Optional)"
+              hint="PDF, DOCX, XLSX, Images up to 25 MB"
               currentFile={
                 newTaskAttachment
                   ? {
@@ -1077,29 +593,125 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
             />
           </div>
 
-          {/* Formal Dean Approval Requirement Switch */}
-          <div style={{ marginTop: '16px', padding: '12px 14px', background: 'var(--bg-inset)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+          {/* 8. Formal Dean Approval Switch */}
+          <div style={{ marginBottom: '16px', padding: '10px 12px', background: 'var(--bg-inset)', borderRadius: '8px', border: '1px solid var(--border)' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', margin: 0 }}>
               <input
                 type="checkbox"
                 checked={requiresDeanApproval}
                 onChange={(e) => setRequiresDeanApproval && setRequiresDeanApproval(e.target.checked)}
-                style={{ width: '17px', height: '17px', cursor: 'pointer' }}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <div>
                 <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)' }}>
                   Requires Formal Dean Approval & Decision
                 </span>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
+                <span style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', display: 'block', marginTop: '1px' }}>
                   {requiresDeanApproval
-                    ? 'Official Accreditation, Exam, or Council deliverable. Dean Prof. Dr. Gehan Safwat must review and approve/provide feedback.'
-                    : 'Delegated / Operational: Task Owner or Committee Chair can sign off and finalize directly.'}
+                    ? 'Dean Prof. Dr. Gehan Safwat must review and formally approve the submitted deliverable.'
+                    : 'Delegated / Operational: Task lead can complete directly.'}
                 </span>
               </div>
             </label>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+          {/* 9. Optional Advanced Targeting Collapsible (Committees / Department / Broadcast) */}
+          <div style={{ marginBottom: '18px' }}>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent-blue)',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                padding: '4px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>{showAdvanced ? '▼ Hide Advanced Targeting Options' : '▶ Show Advanced Targeting Options (Department / Committee / Broadcast)'}</span>
+            </button>
+
+            {showAdvanced && (
+              <div style={{ marginTop: '10px', padding: '12px', background: 'var(--bg-inset)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                {/* Mode Selector */}
+                <div className="segmented-control" style={{ marginBottom: '12px' }}>
+                  <button
+                    type="button"
+                    className={`segmented-btn ${dispatchMode === 'single' ? 'active' : ''}`}
+                    onClick={() => setDispatchMode('single')}
+                  >
+                    <span>👤 Single</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`segmented-btn ${dispatchMode === 'committee' ? 'active' : ''}`}
+                    onClick={() => setDispatchMode('committee')}
+                  >
+                    <span>🏛️ Committee</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`segmented-btn ${dispatchMode === 'department' ? 'active' : ''}`}
+                    onClick={() => setDispatchMode('department')}
+                  >
+                    <span>🏢 Department</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`segmented-btn ${dispatchMode === 'all' ? 'active' : ''}`}
+                    onClick={() => setDispatchMode('all')}
+                  >
+                    <span>🌐 Broadcast (All)</span>
+                  </button>
+                </div>
+
+                {dispatchMode === 'committee' && (
+                  <div className="form-group" style={{ marginBottom: '10px' }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem' }}>Target Standing Committee</label>
+                    <select
+                      className="form-select"
+                      value={targetCommitteeId}
+                      onChange={(e) => setTargetCommitteeId && setTargetCommitteeId(e.target.value ? Number(e.target.value) : '')}
+                      style={{ fontSize: '0.84rem' }}
+                    >
+                      <option value="">-- Choose Standing Committee --</option>
+                      {committees.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.icon || '🏛️'} {c.name} ({c.members?.length || 0} appointed members)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {dispatchMode === 'department' && (
+                  <div className="form-group" style={{ marginBottom: '10px' }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem' }}>Target Department</label>
+                    <select
+                      className="form-select"
+                      value={targetDept}
+                      onChange={(e) => setTargetDept(e.target.value)}
+                      style={{ fontSize: '0.84rem' }}
+                    >
+                      {facultyDepartments.map(d => (
+                        <option key={d} value={d}>
+                          {d} ({allUsers.filter(u => u.department === d && u.role !== 'dean').length} Staff)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginTop: '20px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
             <button
               type="button"
               className="btn btn-secondary"
@@ -1111,15 +723,10 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
               type="submit"
               className="btn btn-primary"
               disabled={isCreatingTask}
+              style={{ fontWeight: 800, minWidth: '150px' }}
             >
               <Send size={16} />
-              <span>
-                {isCreatingTask ? 'Dispatching...' :
-                 dispatchMode === 'single' ? 'Dispatch Task' :
-                 dispatchMode === 'selected' ? `Bulk Dispatch to ${selectedRecipients.length} Faculty` :
-                 dispatchMode === 'department' ? `Bulk Dispatch to ${targetDept}` :
-                 `Broadcast to All Faculty (${allUsers.filter(u => u.role !== 'dean').length})`}
-              </span>
+              <span>{isCreatingTask ? 'Dispatching...' : 'Dispatch Task'}</span>
             </button>
           </div>
         </form>
