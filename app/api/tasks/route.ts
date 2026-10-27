@@ -13,6 +13,17 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Ensure live Google Sheet tasks are loaded if memory lacks sheet tasks
+    const g = globalThis as any;
+    const hasSheetTasks = Array.isArray(g.__memoryTasks) && g.__memoryTasks.some((t: any) => t.source === 'sheet');
+    if (!hasSheetTasks) {
+      try {
+        await syncTasksFromGoogleSheet();
+      } catch (sheetErr) {
+        console.warn('Auto sync sheet in GET /api/tasks:', sheetErr);
+      }
+    }
+
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const department = searchParams.get('department');
@@ -224,6 +235,17 @@ export async function POST(req: Request) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Ensure live Google Sheet tasks are loaded if memory lacks sheet tasks
+    const g = globalThis as any;
+    const hasSheetTasks = Array.isArray(g.__memoryTasks) && g.__memoryTasks.some((t: any) => t.source === 'sheet');
+    if (!hasSheetTasks) {
+      try {
+        await syncTasksFromGoogleSheet();
+      } catch (sheetErr) {
+        console.warn('Auto sync sheet in GET /api/tasks:', sheetErr);
+      }
     }
 
     const body = await req.json();

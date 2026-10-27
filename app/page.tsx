@@ -1098,39 +1098,50 @@ export default function DashboardPage() {
   // Create Task (Supports Single Assignee, Multi-Selected Staff, Department, or Broadcast)
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskTitle || !newTaskDescription || !newTaskDeadline) {
-      alert('Please fill in title, instructions, and deadline');
+    if (!newTaskTitle || !newTaskTitle.trim()) {
+      alert('Please enter or select a task title');
       return;
     }
 
-    if (dispatchMode === 'single' && !newTaskAssigneeId) {
+    const effectiveDescription = (newTaskDescription || '').trim() || `Official academic directive: ${newTaskTitle}. Please complete and submit deliverables by the deadline.`;
+    const effectiveDeadline = newTaskDeadline ? new Date(newTaskDeadline).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString();
+
+    let effectiveMode = dispatchMode;
+    let effectiveRecipients = [...selectedRecipients];
+
+    if (effectiveMode === 'single' && !newTaskAssigneeId && effectiveRecipients.length > 0) {
+      effectiveMode = 'selected';
+    } else if (effectiveMode === 'selected' && effectiveRecipients.length === 0 && newTaskAssigneeId) {
+      effectiveRecipients = [Number(newTaskAssigneeId)];
+    }
+
+    if (effectiveMode === 'single' && !newTaskAssigneeId) {
       alert('Please select an assigned staff member');
       return;
     }
 
-
-    if (dispatchMode === 'committee' && !targetCommitteeId) {
+    if (effectiveMode === 'committee' && !targetCommitteeId) {
       alert('Please select a Standing Committee');
       return;
     }
 
-    if (dispatchMode === 'selected' && selectedRecipients.length === 0) {
+    if (effectiveMode === 'selected' && effectiveRecipients.length === 0) {
       alert('Please select at least one staff member from the list');
       return;
     }
 
     setIsCreatingTask(true);
     try {
-      if (dispatchMode === 'single') {
+      if (effectiveMode === 'single') {
         const res = await fetch('/api/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: newTaskTitle,
-            description: newTaskDescription,
+            title: newTaskTitle.trim(),
+            description: effectiveDescription,
             assigned_to_id: newTaskAssigneeId,
             priority: newTaskPriority,
-            deadline: new Date(newTaskDeadline).toISOString(),
+            deadline: effectiveDeadline,
             category: newTaskCategory,
             google_form_url: newTaskGoogleFormUrl || undefined,
             hat_id: targetHatId ? Number(targetHatId) : undefined,
@@ -1155,10 +1166,10 @@ export default function DashboardPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             operation: 'dispatch_bulk',
-            title: newTaskTitle,
-            description: newTaskDescription,
+            title: newTaskTitle.trim(),
+            description: effectiveDescription,
             priority: newTaskPriority,
-            deadline: new Date(newTaskDeadline).toISOString(),
+            deadline: effectiveDeadline,
             target_type: dispatchMode === 'department' ? 'department' : dispatchMode === 'all' ? 'all_staff' : dispatchMode === 'committee' ? 'committee' : 'selected_users',
             target_committee_id: targetCommitteeId ? Number(targetCommitteeId) : undefined,
             target_dept: targetDept,

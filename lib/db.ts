@@ -88,7 +88,7 @@ const DEFAULT_LOGS_SEED: any[] = [
   }
 ];
 
-const DEFAULT_TASKS_SEED: any[] = FALL_2026_TASKS;
+const DEFAULT_TASKS_SEED: any[] = [];
 export { FALL_2026_TASKS };
 
 const DEFAULT_HATS_SEED: HatRecord[] = [
@@ -430,6 +430,9 @@ const DEFAULT_DEAN_SLOTS: DeanAvailabilitySlot[] = [
 const g = globalThis as any;
 
 if (!g.__memoryTasks) g.__memoryTasks = DEFAULT_TASKS_SEED;
+if (g.__memoryTasks && g.__memoryTasks.length === 94 && g.__memoryTasks.every((t: any) => t.status === 'in_progress')) {
+  g.__memoryTasks = [];
+}
 if (!g.__memoryHats) g.__memoryHats = DEFAULT_HATS_SEED;
 if (!g.__memoryHatMembers) g.__memoryHatMembers = DEFAULT_HAT_MEMBERS_SEED;
 if (!g.__memoryLogs) g.__memoryLogs = DEFAULT_LOGS_SEED;
@@ -979,20 +982,45 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
       updated_at: new Date().toISOString(),
     };
 
-    const colMatch = sql.match(/INSERT\s+INTO\s+tasks\s*\(([^)]+)\)/i);
+    const colMatch = sql.match(/INSERT\s+INTO\s+tasks\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
     if (colMatch) {
       const cols = colMatch[1].split(',').map(c => c.trim().toLowerCase());
+      const valTokens = colMatch[2].split(',').map(v => v.trim());
+      let pIdx = 0;
       cols.forEach((col, idx) => {
-        if (idx < params.length) {
-          const val = params[idx];
-          if (['assigned_by_id', 'assigned_to_id', 'hat_id', 'attachment_size', 'tr', 'is_confidential', 'meeting_id'].includes(col)) {
-            newTask[col] = val !== null && val !== undefined && val !== '' ? Number(val) : null;
-          } else {
-            newTask[col] = val;
-          }
+        const token = valTokens[idx];
+        let val: any = undefined;
+        if (token && token.startsWith("'") && token.endsWith("'")) {
+          val = token.slice(1, -1);
+        } else if (pIdx < params.length) {
+          val = params[pIdx++];
+        }
+
+        if (['assigned_by_id', 'assigned_to_id', 'hat_id', 'attachment_size', 'tr', 'is_confidential', 'meeting_id', 'dean_acknowledged', 'requires_dean_approval', 'task_owner_id'].includes(col)) {
+          newTask[col] = val !== null && val !== undefined && val !== '' ? Number(val) : null;
+        } else if (val !== undefined) {
+          newTask[col] = val;
         }
       });
     } else {
+      const simpleMatch = sql.match(/INSERT\s+INTO\s+tasks\s*\(([^)]+)\)/i);
+      if (simpleMatch) {
+        const cols = simpleMatch[1].split(',').map(c => c.trim().toLowerCase());
+        cols.forEach((col, idx) => {
+          if (idx < params.length) {
+            const val = params[idx];
+            if (['assigned_by_id', 'assigned_to_id', 'hat_id', 'attachment_size', 'tr', 'is_confidential', 'meeting_id'].includes(col)) {
+              newTask[col] = val !== null && val !== undefined && val !== '' ? Number(val) : null;
+            } else {
+              newTask[col] = val;
+            }
+          }
+        });
+      }
+    }
+
+    if (!newTask.status) newTask.status = 'pending';
+    if (!newTask.source) newTask.source = 'portal'; else {
       newTask.title = params[0];
       newTask.description = params[1];
       newTask.assigned_by_id = Number(params[2]);
