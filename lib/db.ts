@@ -1020,20 +1020,7 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
     }
 
     if (!newTask.status) newTask.status = 'pending';
-    if (!newTask.source) newTask.source = 'portal'; else {
-      newTask.title = params[0];
-      newTask.description = params[1];
-      newTask.assigned_by_id = Number(params[2]);
-      newTask.assigned_to_id = Number(params[3]);
-      newTask.department = params[4];
-      newTask.hat_id = params[5] ? Number(params[5]) : null;
-      newTask.priority = params[6] || 'medium';
-      newTask.deadline = params[7];
-      newTask.attachment_name = params[8] || null;
-      newTask.attachment_type = params[9] || null;
-      newTask.attachment_size = params[10] ? Number(params[10]) : null;
-      newTask.attachment_url = params[11] || null;
-    }
+    if (!newTask.source) newTask.source = 'portal';
 
     g.__memoryTasks.unshift(newTask);
     await persistCurrentState();
