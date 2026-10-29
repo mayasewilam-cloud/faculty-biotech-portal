@@ -150,7 +150,7 @@ async function runTestSuite() {
       body: JSON.stringify({
         title: 'NAQAAE E2E Audit: BIO405 Advanced Genomic Biotechnology Specs',
         description: 'Comprehensive review of practical lab manuals and learning outcome rubrics.',
-        assigned_to_id: 6591, // Vice Dean
+        assigned_to_id: 1002, // Vice Dean
         department: 'Academic Staff',
         priority: 'high',
         deadline,
@@ -262,7 +262,7 @@ async function runTestSuite() {
       body: JSON.stringify({
         action: 'reassign',
         task_ids: [createdTaskId],
-        data: { assigned_to_id: 6591 },
+        data: { assigned_to_id: 1002 },
       }),
     });
 
@@ -422,7 +422,7 @@ async function runTestSuite() {
         action: 'add_member',
         committee_id: testCommitteeId,
         member: {
-          user_id: 6591,
+          user_id: 1002,
           name: 'Prof. Dr. Amr Ageez',
           title: 'Vice Dean',
           role: 'Deputy Chair',
@@ -442,7 +442,7 @@ async function runTestSuite() {
       body: JSON.stringify({
         action: 'remove_member',
         committee_id: testCommitteeId,
-        member_id: 6591,
+        member_id: 1002,
       }),
     });
     if (remMemRes.status !== 200) throw new Error(`Remove committee member failed: ${remMemRes.status}`);
@@ -480,14 +480,14 @@ async function runTestSuite() {
         objective: 'Align institutional KPI benchmarks with university presidency',
         attendees: [
           { user_id: 6496, name: 'Prof. Dr. Gehan Safwat', role: 'Dean & Delegation Lead', attended: true },
-          { user_id: 6591, name: 'Prof. Dr. Amr Ageez', role: 'Vice Dean', attended: true },
+          { user_id: 1002, name: 'Prof. Dr. Amr Ageez', role: 'Vice Dean', attended: true },
         ],
         agenda: ['Review Accreditation KPIs', 'Approve Capital Equipment Upgrades'],
         decisions: ['Approved expedited procurement for lab bioreactors'],
         action_items: [
           {
             title: 'Draft Lab Equipment Procurement Spec Sheet',
-            assigned_to_id: 6591,
+            assigned_to_id: 1002,
             assigned_to_name: 'Prof. Dr. Amr Ageez',
             priority: 'urgent',
             deadline: new Date(Date.now() + 86400000 * 5).toISOString(),
@@ -538,7 +538,7 @@ async function runTestSuite() {
             {
               id: 'AI-DEAN-1',
               title: 'Prepare executive slides for President',
-              assigned_to_id: 6591,
+              assigned_to_id: 1002,
               assigned_to_name: 'Prof. Dr. Amr Ageez',
               department: 'Academic Staff',
               priority: 'urgent',
@@ -1180,7 +1180,7 @@ async function runTestSuite() {
       body: JSON.stringify({
         title: 'Master Accreditation Self-Study Dossier 2026',
         description: 'Overarching institutional project divided into departmental responsibilities.',
-        assigned_to_id: 6591,
+        assigned_to_id: 1002,
         priority: 'high',
         deadline: new Date(Date.now() + 86400000 * 14).toISOString(),
         task_owner_id: 6496,
@@ -1202,7 +1202,7 @@ async function runTestSuite() {
       body: JSON.stringify({
         title: 'Section 4.2 Practical Lab Specs Matrix',
         description: 'Individual deliverable for laboratory learning outcomes.',
-        assigned_to_id: 6591,
+        assigned_to_id: 1002,
         priority: 'medium',
         deadline: new Date(Date.now() + 86400000 * 7).toISOString(),
         parent_task_id: subTaskTestParentId,

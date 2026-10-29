@@ -322,7 +322,10 @@ export async function POST(req: Request) {
     const createdTasks: any[] = [];
 
     for (const targetId of targetIds) {
-      const assignee = await queryFirst('SELECT * FROM users WHERE id = ?', [targetId]) as any;
+      let assignee = await queryFirst('SELECT * FROM users WHERE id = ?', [targetId]) as any;
+      if (!assignee) {
+        assignee = await queryFirst('SELECT * FROM users WHERE id = ?', [user.id]) as any;
+      }
       if (!assignee) continue;
 
       const result = await execute(`

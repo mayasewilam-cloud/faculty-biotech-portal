@@ -1480,7 +1480,7 @@ export async function ensureAllStaffExist(): Promise<void> {
         params.push(u.id, u.email, u.password_hash, u.full_name, u.title, u.role, u.department, u.phone, u.avatar);
       }
       await db.prepare(`
-        INSERT OR IGNORE INTO users (id, email, password_hash, full_name, title, role, department, phone, avatar, status)
+        INSERT OR REPLACE INTO users (id, email, password_hash, full_name, title, role, department, phone, avatar, status)
         VALUES ${placeholders}
       `).bind(...params).run();
     }
