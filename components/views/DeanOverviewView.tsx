@@ -97,7 +97,13 @@ export const DeanOverviewView: React.FC<DeanOverviewViewProps> = ({
   } = metrics;
 
   // Follow-Up Tasks (Fall 2026 file)
-  const followUpTasks = useMemo(() => scopedTasks.filter((t: any) => t.tr != null), [scopedTasks]);
+  const followUpTasks = useMemo(() => scopedTasks.filter((t: any) => t.tr != null || (t as any).source === "portal"), [scopedTasks]);
+
+  // Recent portal-dispatched tasks to display immediately on Overview
+  const recentPortalTasks = useMemo(() => {
+    return scopedTasks.filter((t: any) => t.source === "portal" || (!t.month_sheet && Number(t.id) > 100))
+      .slice(0, 5);
+  }, [scopedTasks]);
   const followUpDone = followUpTasks.filter(t => t.status === 'done').length;
   const followUpPending = followUpTasks.filter(t => t.status !== 'done').length;
   const followUpOverdue = followUpTasks.filter(t => t.status !== 'done' && t.deadline && new Date(t.deadline) < now).length;
@@ -656,6 +662,66 @@ export const DeanOverviewView: React.FC<DeanOverviewViewProps> = ({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* SUBSECTION 0: RECENTLY DISPATCHED DIRECTIVES */}
+              {recentPortalTasks.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      ⚡ Recently Dispatched Directives ({recentPortalTasks.length})
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToTasks && onNavigateToTasks('all')}
+                      style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    >
+                      View All →
+                    </button>
+                  </div>
+                  {recentPortalTasks.map((t) => (
+                    <div
+                      key={t.id}
+                      onClick={() => onSelectTask(t)}
+                      style={{
+                        padding: '11px 13px',
+                        borderRadius: '12px',
+                        background: 'rgba(59, 130, 246, 0.06)',
+                        border: '1.5px solid rgba(59, 130, 246, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {t.tr && <span style={{ color: 'var(--accent-blue)', marginRight: '6px' }}>#{t.tr}</span>}
+                          {t.title}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>👥 {t.assignee_name || (Array.isArray(t.assigned_members) && t.assigned_members[0]) || 'Staff'}</span>
+                          <span>•</span>
+                          <span>📅 Due: {t.deadline ? new Date(t.deadline).toLocaleDateString('en-GB') : 'Open'}</span>
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        padding: '3px 9px',
+                        borderRadius: '999px',
+                        background: 'rgba(59, 130, 246, 0.14)',
+                        color: 'var(--accent-blue)',
+                        border: '1px solid rgba(59, 130, 246, 0.35)',
+                        whiteSpace: 'nowrap',
+                        textTransform: 'uppercase'
+                      }}>
+                        {t.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* SUBSECTION 1: AWAITING DEAN REVIEW */}
               {awaitingReviewTasks.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

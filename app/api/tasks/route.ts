@@ -311,6 +311,18 @@ export async function POST(req: Request) {
     const assignedHatId = hat_id ? Number(hat_id) : null;
     const assignedCommitteeId = committee_id ? Number(committee_id) : null;
     const reqGroupId = group_id || (targetIds.length > 1 ? `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` : null);
+
+    // Auto-assign sequential TR so task appears in Follow-up files and tables in sequence
+    let assignedTr = tr ? Number(tr) : null;
+    if (!assignedTr) {
+      try {
+        const maxTrRow = await queryFirst('SELECT MAX(tr) as max_tr FROM tasks') as any;
+        const maxTr = maxTrRow && maxTrRow.max_tr ? Number(maxTrRow.max_tr) : 46;
+        assignedTr = maxTr + 1;
+      } catch {
+        assignedTr = 47;
+      }
+    }
     
     // Prevent deep nesting and circular parent relationships (Option B guard)
     let validParentTaskId: number | null = null;
@@ -358,7 +370,7 @@ export async function POST(req: Request) {
         attachment_type || null,
         attachment_size ? Number(attachment_size) : null,
         attachment_url || null,
-        tr ? Number(tr) : null,
+        assignedTr,
         start_date || new Date().toISOString().split('T')[0],
         due_time || 'Not Specified',
         comment_type || 'Comment',

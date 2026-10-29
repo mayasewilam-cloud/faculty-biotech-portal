@@ -211,8 +211,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     });
 
     // 2. Add recent activity logs (including direct TASK_ASSIGNED alerts)
-    logs.slice(0, 15).forEach((l) => {
-      if (l.action_type === 'TASK_ASSIGNED' && (l.user_id === currentUser?.id || isDean)) {
+    logs.slice(0, 30).forEach((l) => {
+      const isAssigned = (l.action_type || '').toLowerCase() === 'task_assigned';
+      if (isAssigned && (l.user_id === currentUser?.id || isDean)) {
         list.push({
           id: `log-task-assigned-${l.id}`,
           type: 'assignment',
@@ -221,7 +222,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
           timestamp: l.created_at || new Date().toISOString(),
           severity: 'urgent',
         });
-      } else if (l.action_type === 'EMAIL_DISPATCHED') {
+      } else if ((l.action_type || '').toLowerCase() === 'email_dispatched') {
         list.push({
           id: `log-email-${l.id}`,
           type: 'log',

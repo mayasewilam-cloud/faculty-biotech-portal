@@ -62,7 +62,7 @@ import { HatsView } from '@/components/views/HatsView';
 import { CommitteesView } from '@/components/views/CommitteesView';
 import { MeetingsView } from '@/components/views/MeetingsView';
 import { CalendarView } from '@/components/views/CalendarView';
-import { NewTaskModal } from '@/components/modals/NewTaskModal';
+import { NewTaskModal, resolveTaskMemberUser } from '@/components/modals/NewTaskModal';
 import { BulkStatusModal } from '@/components/modals/BulkStatusModal';
 import { BulkPriorityModal } from '@/components/modals/BulkPriorityModal';
 import { UpdateTaskModal } from '@/components/modals/UpdateTaskModal';
@@ -1127,6 +1127,19 @@ export default function DashboardPage() {
       }
     }
 
+    // Resolve all assigned member names to user IDs so EVERY member gets their task assignment & notification!
+    const resolvedRecipients: number[] = [...selectedRecipients];
+    const userPool = allUsers.length > 0 ? allUsers : baseUsers;
+    for (const mName of effectiveMembers) {
+      const found = resolveTaskMemberUser(mName, userPool);
+      if (found && !resolvedRecipients.includes(found.id)) {
+        resolvedRecipients.push(found.id);
+      }
+    }
+    if (resolvedRecipients.length === 0 && effectiveAssigneeId) {
+      resolvedRecipients.push(effectiveAssigneeId);
+    }
+
     setIsCreatingTask(true);
     try {
       if (dispatchMode === 'department' || dispatchMode === 'all') {
@@ -1165,7 +1178,7 @@ export default function DashboardPage() {
             title: newTaskTitle.trim(),
             description: effectiveDescription,
             assigned_to_id: effectiveAssigneeId,
-            assigned_to_ids: selectedRecipients.length > 0 ? selectedRecipients : [effectiveAssigneeId],
+            assigned_to_ids: resolvedRecipients.length > 0 ? resolvedRecipients : [effectiveAssigneeId],
             assigned_members: effectiveMembers,
             priority: newTaskPriority,
             deadline: effectiveDeadline,

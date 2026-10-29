@@ -68,6 +68,8 @@ export interface Task {
   category?: string;
   drive_link?: string | null;
   action_plan?: string | null;
+  source?: "portal" | "sheet" | "manual" | string;
+  month_sheet?: string;
 }
 
 export interface ConfidentialSubmissionRequest {
