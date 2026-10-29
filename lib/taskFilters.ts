@@ -1,3 +1,25 @@
+/**
+ * Safely parse assigned_members into string[] whether it's an array, JSON string, or comma-separated string
+ */
+export function parseAssignedMembers(raw: any): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
+        }
+      } catch {}
+    }
+    return trimmed.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+  }
+  return [];
+}
+
 import { Task, User } from '@/types';
 
 /**
@@ -53,18 +75,7 @@ export function isUserAssignedToTask(task: Task, user: User | null): boolean {
 
   // 3. Multi-Member assigned_members array or JSON/comma string
   if (task.assigned_members) {
-    let members: string[] = [];
-    if (Array.isArray(task.assigned_members)) {
-      members = task.assigned_members;
-    } else if (typeof task.assigned_members === 'string') {
-      try {
-        const parsed = JSON.parse(task.assigned_members);
-        if (Array.isArray(parsed)) members = parsed;
-        else members = (task.assigned_members as string).split(',').map((s) => s.trim());
-      } catch {
-        members = (task.assigned_members as string).split(',').map((s) => s.trim());
-      }
-    }
+    const members = parseAssignedMembers(task.assigned_members);
 
     const uClean = userFullName.replace(/^(prof\.|dr\.|la\.|ta\.|ms\.|mrs\.|mr\.)\s*/, '').trim();
 

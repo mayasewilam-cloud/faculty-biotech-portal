@@ -1,4 +1,5 @@
 'use client';
+import { parseAssignedMembers } from '@/lib/taskFilters';
 
 import React, { useState } from 'react';
 import { Task } from '@/types';
@@ -284,30 +285,36 @@ export const TaskInspectionDrawer: React.FC<TaskInspectionDrawerProps> = ({
             marginBottom: '20px',
           }}
         >
-          <div>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Assigned Faculty Team ({Array.isArray(task.assigned_members) && task.assigned_members.length > 0 ? task.assigned_members.length : 1} Members)
-            </span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-              {(Array.isArray(task.assigned_members) && task.assigned_members.length > 0 
-                ? task.assigned_members 
-                : [task.assignee_name || 'Faculty Staff']).map((name, idx) => (
-                <span
-                  key={idx}
-                  style={{
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    background: 'rgba(37, 99, 235, 0.12)',
-                    color: 'var(--accent-blue)',
-                    border: '1px solid rgba(37, 99, 235, 0.3)',
-                  }}
-                >
-                  {name}
-                </span>
-              ))}
-            </div>
+                    <div>
+            {(() => {
+              const teamList = parseAssignedMembers(task.assigned_members);
+              const displayList = teamList.length > 0 ? teamList : [task.assignee_name || 'Faculty Staff'];
+              return (
+                <>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    Assigned Faculty Team ({displayList.length} Members)
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                    {displayList.map((name, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          background: 'rgba(37, 99, 235, 0.12)',
+                          color: 'var(--accent-blue)',
+                          border: '1px solid rgba(37, 99, 235, 0.3)',
+                        }}
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
             {task.task_owner_name && (
               <div style={{ fontSize: '0.75rem', color: 'var(--status-progress)', fontWeight: 600, marginTop: '6px' }}>
                 👑 Lead: {task.task_owner_name}

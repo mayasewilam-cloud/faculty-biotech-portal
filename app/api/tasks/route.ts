@@ -1,4 +1,4 @@
-import { isUserAssignedToTask } from '@/lib/taskFilters';
+import { isUserAssignedToTask, parseAssignedMembers } from '@/lib/taskFilters';
 import { syncTasksFromGoogleSheet } from '@/lib/sheet_sync';
 
 import { NextResponse } from 'next/server';
@@ -220,7 +220,10 @@ export async function GET(req: Request) {
           };
         }
       }
-      return t;
+      return {
+        ...t,
+        assigned_members: parseAssignedMembers(t.assigned_members),
+      };
     });
 
     return NextResponse.json({ tasks });

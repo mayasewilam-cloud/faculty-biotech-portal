@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Task, Hat, User } from '@/types';
-import { isTaskOverdue, isTaskAwaitingDeanReview, isUserAssignedToTask } from '@/lib/taskFilters';
+import { isTaskOverdue, isTaskAwaitingDeanReview, isUserAssignedToTask, parseAssignedMembers } from '@/lib/taskFilters';
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
 import { ManageAssigneesModal } from '@/components/modals/ManageAssigneesModal';
 import {
@@ -245,7 +245,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
         const matchAssignee = (t.assignee_name || '').toLowerCase().includes(q);
         const matchOwner = (t.task_owner_name || '').toLowerCase().includes(q);
         const matchCategory = (t.category || '').toLowerCase().includes(q);
-        const matchMembers = (t.assigned_members || []).some((m: string) => m.toLowerCase().includes(q));
+        const matchMembers = parseAssignedMembers(t.assigned_members).some((m: string) => m.toLowerCase().includes(q));
         const matchTr = t.tr ? String(t.tr).includes(q) : false;
         const matchNotes = (t.completion_notes || '').toLowerCase().includes(q);
         if (!matchTitle && !matchDesc && !matchAssignee && !matchOwner && !matchCategory && !matchMembers && !matchTr && !matchNotes) {
@@ -1237,27 +1237,31 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                           </div>
 
                           {/* Multiple Assigned Members Pills */}
-                          {task.assigned_members && task.assigned_members.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '240px' }}>
-                              {task.assigned_members.map((member, mIdx) => (
-                                <span
-                                  key={mIdx}
-                                  style={{
-                                    fontSize: '0.7rem',
-                                    padding: '1px 6px',
-                                    borderRadius: '999px',
-                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                    color: 'var(--text-main)',
-                                    border: '1px solid rgba(59, 130, 246, 0.25)',
-                                    fontWeight: 600,
-                                    whiteSpace: 'nowrap'
-                                  }}
-                                >
-                                  {member}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          {(() => {
+                            const membersList = parseAssignedMembers(task.assigned_members);
+                            if (membersList.length === 0) return null;
+                            return (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '240px' }}>
+                                {membersList.map((member, mIdx) => (
+                                  <span
+                                    key={mIdx}
+                                    style={{
+                                      fontSize: '0.7rem',
+                                      padding: '1px 6px',
+                                      borderRadius: '999px',
+                                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                      color: 'var(--text-main)',
+                                      border: '1px solid rgba(59, 130, 246, 0.25)',
+                                      fontWeight: 600,
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    {member}
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          })()}
 
                           {/* Quick Team Management Button */}
                           <button
@@ -1270,7 +1274,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                             style={{ padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, width: 'fit-content' }}
                             title="Add or remove team members for this task"
                           >
-                            <span>👥 Edit Team ({task.assigned_members?.length || 1})</span>
+                            <span>👥 Edit Team ({parseAssignedMembers(task.assigned_members).length || 1})</span>
                           </button>
                         </div>
                       </td>
