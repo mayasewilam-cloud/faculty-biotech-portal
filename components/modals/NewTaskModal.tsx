@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Hat, User, FacultyCommittee } from '@/types';
-import { Users2, Paperclip, FileText, Send, Sparkles, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Users2, Paperclip, FileText, Send, Sparkles, Plus, Trash2, CheckCircle2, Search } from 'lucide-react';
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
 import { FALL_2026_TASK_ROSTER } from '@/lib/fall_2026_tasks_roster';
 import { QUADRUPLET_ALIASES } from '@/lib/staff_seed';
@@ -153,9 +153,21 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
   const setAssignedMemberNames = propSetAssignedMemberNames !== undefined ? propSetAssignedMemberNames : setLocalMemberNames;
 
   const [selectedTaskTemplate, setSelectedTaskTemplate] = useState<string>('');
+  const [directiveSearch, setDirectiveSearch] = useState<string>('');
   const [memberToAdd, setMemberToAdd] = useState<string>('');
   const [customMemberInput, setCustomMemberInput] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+
+  // Fast filtering of official Fall 2026 directives by title or member name
+  const filteredDirectives = useMemo(() => {
+    if (!directiveSearch.trim()) return FALL_2026_TASK_ROSTER;
+    const q = directiveSearch.toLowerCase().trim();
+    return FALL_2026_TASK_ROSTER.filter((t) => {
+      const matchTitle = t.title.toLowerCase().includes(q);
+      const matchMembers = Array.isArray(t.members) && t.members.some(m => m.toLowerCase().includes(q));
+      return matchTitle || matchMembers;
+    });
+  }, [directiveSearch]);
 
   // Fall 2026 Directive Template Selection Handler
   const handleSelectDirectiveTemplate = (title: string) => {
@@ -271,14 +283,85 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
         </div>
 
         <form onSubmit={onSubmit} noValidate>
-          {/* 1. PRIMARY: Task Directive Preset Selection */}
+          {/* 1. PRIMARY: Task Directive Preset Selection with Integrated Search Bar */}
           <div className="form-group" style={{ marginBottom: '16px' }}>
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 800 }}>
               <span>📋 Select Task Directive</span>
               <span style={{ fontSize: '0.74rem', color: 'var(--accent-blue)', fontWeight: 700 }}>
-                {FALL_2026_TASK_ROSTER.length} Official Directives Available
+                {directiveSearch.trim() ? `${filteredDirectives.length} of ${FALL_2026_TASK_ROSTER.length} Matching` : `${FALL_2026_TASK_ROSTER.length} Official Directives`}
               </span>
             </label>
+
+            {/* Directive Search Bar */}
+            <div style={{ position: 'relative', marginBottom: '8px' }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="🔍 Search directives by title or staff member (e.g. 'Graduation', 'Map', 'Maya', 'Exam')..."
+                value={directiveSearch}
+                onChange={(e) => setDirectiveSearch(e.target.value)}
+                style={{ fontSize: '0.86rem', height: '38px', paddingLeft: '34px', paddingRight: directiveSearch ? '30px' : '10px' }}
+              />
+              <Search size={15} style={{ position: 'absolute', left: '11px', top: '12px', color: 'var(--text-muted)' }} />
+              {directiveSearch && (
+                <button
+                  type="button"
+                  onClick={() => setDirectiveSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '8px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    fontSize: '0.9rem',
+                    lineHeight: 1
+                  }}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Quick 1-click suggestion chips when typing search query */}
+            {directiveSearch.trim() && filteredDirectives.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px', maxHeight: '110px', overflowY: 'auto', padding: '2px 0' }}>
+                {filteredDirectives.slice(0, 6).map((t) => (
+                  <button
+                    key={t.title}
+                    type="button"
+                    onClick={() => handleSelectDirectiveTemplate(t.title)}
+                    style={{
+                      fontSize: '0.76rem',
+                      padding: '4px 9px',
+                      borderRadius: '6px',
+                      border: selectedTaskTemplate === t.title ? '1.5px solid var(--accent-blue)' : '1px solid var(--border)',
+                      background: selectedTaskTemplate === t.title ? 'rgba(59,130,246,0.18)' : 'var(--bg-card)',
+                      color: selectedTaskTemplate === t.title ? 'var(--accent-blue)' : 'var(--text-primary)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontWeight: selectedTaskTemplate === t.title ? 700 : 600,
+                    }}
+                  >
+                    <span>📌</span>
+                    <span>{t.title}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>({t.members.length} {t.members.length === 1 ? 'member' : 'members'})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {directiveSearch.trim() && filteredDirectives.length === 0 && (
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px', fontStyle: 'italic' }}>
+                No directives matched "{directiveSearch}". You can choose "Custom Task" below to enter a custom directive.
+              </div>
+            )}
+
             <select
               className="form-select"
               value={selectedTaskTemplate}
@@ -287,8 +370,8 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
             >
               <option value="">-- Choose a Task from Fall 2026 Allocation --</option>
               <option value="custom">✍️ Custom Task (Type New Title)</option>
-              <optgroup label="📋 Fall 2026 Tasks Allocation">
-                {FALL_2026_TASK_ROSTER.map((t) => (
+              <optgroup label={directiveSearch.trim() ? `📋 Matching Directives (${filteredDirectives.length})` : "📋 Fall 2026 Tasks Allocation"}>
+                {filteredDirectives.map((t) => (
                   <option key={t.title} value={t.title}>
                     📌 {t.title} ({t.members.length} member{t.members.length === 1 ? '' : 's'})
                   </option>

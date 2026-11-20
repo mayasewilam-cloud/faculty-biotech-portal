@@ -700,7 +700,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4022,
-    "email": "maya.abdelrazek@msa.edu.eg",
+    "email": "maabdelrazek@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Maya Abdelrazek",
     "title": "TA.",

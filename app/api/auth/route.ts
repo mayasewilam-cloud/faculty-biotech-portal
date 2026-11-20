@@ -474,6 +474,12 @@ export async function POST(req: Request) {
       normalizedEmail === 'amr.ageez@faculty.edu'
     ) {
       normalizedEmail = 'amr.ageez@msa.edu.eg';
+    } else if (
+      normalizedEmail === 'maya.abdelrazek@msa.edu.eg' ||
+      normalizedEmail === 'maya.abdelrazik@msa.edu.eg' ||
+      normalizedEmail === 'maabdelrazik@msa.edu.eg'
+    ) {
+      normalizedEmail = 'maabdelrazek@msa.edu.eg';
     }
 
     const user = await queryFirst('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail]) as any;

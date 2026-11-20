@@ -635,7 +635,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4022,
-    "email": "maya.abdelrazek@msa.edu.eg",
+    "email": "maabdelrazek@msa.edu.eg",
     "full_name": "TA. Maya Abdelrazek",
     "title": "TA.",
     "rank": "TA.",

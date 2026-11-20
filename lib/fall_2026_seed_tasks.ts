@@ -2549,7 +2549,7 @@ export const FALL_2026_TASKS: Fall2026SeedTask[] = [
     "updated_at": "2026-10-01T08:00:00.000Z",
     "assignee_name": "TA. Maya Abdelrazek",
     "assignee_title": "TA.",
-    "assignee_email": "maya.abdelrazek@msa.edu.eg",
+    "assignee_email": "maabdelrazek@msa.edu.eg",
     "assignee_role": "ta",
     "assignee_department": "Academic Staff",
     "creator_name": "Prof. Dr. Gehan Safwat",
