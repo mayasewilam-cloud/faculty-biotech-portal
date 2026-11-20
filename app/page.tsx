@@ -425,20 +425,23 @@ export default function DashboardPage() {
         fetchDeanSlots()
       ]);
 
-      // 4. Fetch logs & analytics if Admin or Dean/Leadership
-      if (authData.user.role === 'admin' || authData.user.role === 'dean' || authData.user.role === 'vice_dean') {
-        const [logsRes, analyticsRes] = await Promise.all([
-          fetch('/api/logs'),
-          fetch('/api/analytics')
-        ]);
+      // 4. Fetch logs for all users (scoped server-side), analytics for Leadership
+      try {
+        const logsRes = await fetch('/api/logs');
         if (logsRes.ok) {
           const logsData = await logsRes.json();
           setLogs(logsData.logs || []);
         }
-        if (analyticsRes.ok) {
-          const analyticsData = await analyticsRes.json();
-          setAnalytics(analyticsData);
-        }
+      } catch (e) {}
+
+      if (authData.user.role === 'admin' || authData.user.role === 'dean' || authData.user.role === 'vice_dean') {
+        try {
+          const analyticsRes = await fetch('/api/analytics');
+          if (analyticsRes.ok) {
+            const analyticsData = await analyticsRes.json();
+            setAnalytics(analyticsData);
+          }
+        } catch (e) {}
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -1716,10 +1719,7 @@ export default function DashboardPage() {
   const filteredTasks = tasks.filter(task => {
     // 0. Member Role Privacy Guard: Normal members only see their own tasks and things related to them
     if (!isDean && currentUser) {
-      const isRelated = task.assigned_to_id === currentUser.id ||
-                        task.task_owner_id === currentUser.id ||
-                        task.assigned_by_id === currentUser.id;
-      if (!isRelated) return false;
+      if (!isUserAssignedToTask(task, currentUser)) return false;
     }
     // 1. Status Filter (Single Source of Truth)
     if (statusFilter !== 'all') {
@@ -1828,11 +1828,7 @@ export default function DashboardPage() {
   });
 
   // Calculate task counts (focus on top-level tasks to prevent sub-task count inflation, scoped by role)
-  const scopedTasksForCounters = isDean ? tasks : tasks.filter(t =>
-    t.assigned_to_id === currentUser?.id ||
-    t.task_owner_id === currentUser?.id ||
-    t.assigned_by_id === currentUser?.id
-  );
+  const scopedTasksForCounters = isDean ? tasks : tasks.filter(t => isUserAssignedToTask(t, currentUser));
   const topLevelTasks = scopedTasksForCounters.filter(t => !t.parent_task_id);
   const totalTasksCount = topLevelTasks.length;
   const completedTasksCount = topLevelTasks.filter(t => t.status === 'done').length;

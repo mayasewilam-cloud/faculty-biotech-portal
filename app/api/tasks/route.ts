@@ -1,5 +1,7 @@
 import { isUserAssignedToTask, parseAssignedMembers } from '@/lib/taskFilters';
 import { syncTasksFromGoogleSheet } from '@/lib/sheet_sync';
+import { renderTaskDispatchTemplate, renderMultiMemberAssignmentTemplate, renderSupervisorAssignmentTemplate } from '@/lib/email';
+import { createInAppNotification, enqueueNotificationEmail, processNotificationQueue } from '@/lib/notifications';
 
 import { NextResponse } from 'next/server';
 import { queryAll, queryFirst, execute } from '@/lib/db';
@@ -60,11 +62,15 @@ export async function GET(req: Request) {
 
     const params: any[] = [];
 
-    // Role-based visibility: match direct id, task owner, or multi-member assignment
-    if (user.role === 'professor' || user.role === 'staff') {
+    const isLeadership = user.role === 'dean' || user.role === 'admin' || user.role === 'vice_dean' || user.id === 99 || user.id === 6496 || user.id === 6591;
+
+    // Role-based visibility: match direct id, task owner, or multi-member assignment for ALL non-leadership
+    if (!isLeadership) {
+      const cleanName = (user.full_name || '').replace(/^(prof\.|dr\.|assoc\.\s*prof\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/gi, '').trim();
       const namePattern = `%${user.full_name}%`;
-      query += ` AND (t.assigned_to_id = ? OR t.assigned_by_id = ? OR t.task_owner_id = ? OR t.assigned_members LIKE ? OR t.assignee_name LIKE ? OR t.committee_id IN (SELECT id FROM committees WHERE chair_id = ?))`;
-      params.push(user.id, user.id, user.id, namePattern, namePattern, user.id);
+      const cleanPattern = `%${cleanName}%`;
+      query += ` AND (t.assigned_to_id = ? OR t.assigned_by_id = ? OR t.task_owner_id = ? OR t.assigned_members LIKE ? OR t.assigned_members LIKE ? OR t.assignee_name LIKE ? OR t.assignee_name LIKE ? OR t.committee_id IN (SELECT id FROM committees WHERE chair_id = ?))`;
+      params.push(user.id, user.id, user.id, namePattern, cleanPattern, namePattern, cleanPattern, user.id);
     } else if (assigneeId && assigneeId !== 'all') {
       query += ` AND t.assigned_to_id = ?`;
       params.push(assigneeId);
@@ -157,8 +163,6 @@ export async function GET(req: Request) {
         console.warn('Auto-sync on empty tasks notice:', e);
       }
     }
-
-    const isLeadership = user.role === 'dean' || user.role === 'admin' || user.role === 'vice_dean' || user.id === 99 || user.id === 6496 || user.id === 6591;
 
     let filtered = rawTasks || [];
 
@@ -295,6 +299,28 @@ export async function POST(req: Request) {
 
     let targetList = body.assigned_to_ids || body.target_user_ids || (body.assigned_to_id ? [body.assigned_to_id] : (body.assigned_to ? [body.assigned_to] : []));
     const assignedMembersList = Array.isArray(assigned_members) ? assigned_members : [];
+
+    // Automatically resolve all names from assigned_members so EVERY designated member gets their task & notification
+    if (assignedMembersList.length > 0) {
+      const allStaffUsers = await queryAll('SELECT id, full_name, email, role, title, department FROM users');
+      const resolvedIds: number[] = Array.isArray(targetList) ? targetList.map(Number) : [];
+      for (const mName of assignedMembersList) {
+        if (!mName || typeof mName !== 'string') continue;
+        const norm = (s: string) => (s || '').toLowerCase().replace(/^(prof\.|dr\.|assoc\.\s*prof\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/gi, '').replace(/[^a-z0-9]/g, '');
+        const cleanM = norm(mName);
+        if (!cleanM) continue;
+        const match = allStaffUsers.find((u: any) => {
+          const uClean = norm(u.full_name);
+          return uClean && (uClean === cleanM || uClean.includes(cleanM) || cleanM.includes(uClean));
+        });
+        if (match && !resolvedIds.includes(match.id)) {
+          resolvedIds.push(match.id);
+        }
+      }
+      if (resolvedIds.length > 0) {
+        targetList = resolvedIds;
+      }
+    }
 
     if ((!targetList || targetList.length === 0) && assignedMembersList.length > 0) {
       targetList = [user.id];
@@ -435,13 +461,64 @@ export async function POST(req: Request) {
         '127.0.0.1'
       ]);
 
+      // Phase 3.11: Institutional In-App Notification & Real Email Dispatch
+      const isSupervisorTask = (title || '').toLowerCase().includes('supervisor') || (category || '').toLowerCase().includes('supervisor');
+      const notifType = isSupervisorTask ? 'supervisor_assignment' : (assignedMembersList.length > 1 ? 'multi_member_assignment' : 'task_dispatch');
+
+      // 1. Create In-App Notification (Guaranteed delivery in portal)
+      await createInAppNotification({
+        userId: assignee.id,
+        userEmail: assignee.email,
+        title: isSupervisorTask ? `Supervisor Appointment: ${title}` : `New Task Directive: ${title}`,
+        message: `Assigned by ${user.title || ''} ${user.full_name}. Priority: ${priority.toUpperCase()}. Due: ${new Date(deadline).toLocaleDateString('en-GB')}.`,
+        type: notifType,
+        relatedTaskId: taskId,
+      });
+
+      // 2. Render Template & Enqueue Email
+      const emailTpl = isSupervisorTask
+        ? renderSupervisorAssignmentTemplate({
+            taskTitle: title,
+            taskId,
+            supervisorName: assignee.full_name,
+            projectTitle: title,
+            deadline,
+          })
+        : (assignedMembersList.length > 1
+            ? renderMultiMemberAssignmentTemplate({
+                taskTitle: title,
+                taskId,
+                priority,
+                deadline,
+                assignedByName: user.full_name,
+                membersList: assignedMembersList,
+              })
+            : renderTaskDispatchTemplate({
+                taskTitle: title,
+                taskId,
+                priority,
+                deadline,
+                assignedByName: user.full_name,
+                instructions: description,
+              })
+          );
+
+      await enqueueNotificationEmail({
+        recipientName: assignee.full_name,
+        recipientEmail: assignee.email,
+        subject: emailTpl.subject,
+        bodyHtml: emailTpl.html,
+        notificationType: notifType,
+        relatedTaskId: taskId,
+        idempotencyKey: `task_dispatch_${taskId}_${assignee.id}`,
+      });
+
       const createdTask = await queryFirst('SELECT * FROM tasks WHERE id = ?', [taskId]);
       if (createdTask) createdTasks.push(createdTask);
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      task: createdTasks[0], 
+    await processNotificationQueue({ batchSize: 10 });
+    return NextResponse.json({ success: true, task: createdTasks[0], 
       tasks: createdTasks, 
       group_id: reqGroupId, 
       count: createdTasks.length 

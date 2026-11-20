@@ -125,7 +125,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   {
     "id": 6496,
     "email": "gehan.safwat@msa.edu.eg",
-    "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
+    "password_hash": "$2b$10$qqdk6/XeXxxTh6K4teq6auk2gSfSnLBQzNeyi0D0htZzP4beqOaJi",
     "full_name": "Prof. Dr. Gehan Safwat",
     "title": "Prof. Dr.",
     "role": "dean",

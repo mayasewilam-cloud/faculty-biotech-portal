@@ -18,7 +18,7 @@ export async function getCurrentUser(): Promise<User | null> {
   const sessionId = cookieStore.get('faculty_session')?.value;
 
   if (sessionId) {
-    // 1. Try DB session join
+    // Verified DB session join only (Strict session invalidation compliance)
     try {
       const session = await queryFirst(`
         SELECT s.user_id, u.* 
@@ -41,39 +41,21 @@ export async function getCurrentUser(): Promise<User | null> {
         };
       }
     } catch (e) {
-      // Fall through to token decode
-    }
-
-    // 2. Resilient fallback: Decode userId from `${userId}.${uuid}` session token
-    try {
-      const parts = sessionId.split('.');
-      if (parts.length >= 2) {
-        const userId = parseInt(parts[0], 10);
-        if (!isNaN(userId) && userId > 0) {
-          const user = await queryFirst(`SELECT * FROM users WHERE id = ?`, [userId]) as any;
-          if (user) {
-            return {
-              id: user.id,
-              email: user.email,
-              full_name: user.full_name,
-              title: user.title,
-              role: user.role,
-              department: user.department,
-              phone: user.phone,
-              avatar: user.avatar,
-              status: user.status || 'active',
-            };
-          }
-        }
-      }
-    } catch (e) {
-      // Reject if lookup fails
+      // Lookup error
     }
 
     return null;
   }
 
   return null;
+}
+
+export async function invalidateAllUserSessions(userId: number): Promise<void> {
+  try {
+    await execute('DELETE FROM sessions WHERE user_id = ?', [userId]);
+  } catch (err) {
+    // Non-blocking
+  }
 }
 
 export async function getImpersonationInfo(): Promise<{ isImpersonating: boolean; adminUserId: number | null }> {

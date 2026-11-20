@@ -328,3 +328,20 @@ CREATE INDEX IF NOT EXISTS idx_hat_members_user ON hat_members(user_id);
 
 
 
+
+-- ─────────────────────────────────────────────────────────────
+-- PASSWORD RESET & VERIFICATION TOKENS
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  created_by_id INTEGER NOT NULL,
+  purpose TEXT DEFAULT 'recovery',
+  used_at DATETIME,
+  attempts INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_reset_tokens_hash ON password_reset_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id);

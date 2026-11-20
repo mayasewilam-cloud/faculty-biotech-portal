@@ -294,6 +294,9 @@ export async function PUT(req: Request) {
   }
 }
 
+// PATCH /api/users alias for PUT
+export const PATCH = PUT;
+
 // DELETE /api/users: Delete/Remove faculty member (Admin/Dean only)
 export async function DELETE(req: Request) {
   try {

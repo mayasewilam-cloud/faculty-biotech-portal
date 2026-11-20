@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [setPasswordEmail, setSetPasswordEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationToken, setVerificationToken] = useState('');
 
   // Register State
   const [registerName, setRegisterName] = useState('');
@@ -463,16 +464,14 @@ export default function LoginPage() {
                     type="password"
                     className="form-input"
                     style={{ paddingLeft: '42px', width: '100%' }}
-                    placeholder="Enter MSA123 or your personal password"
+                    placeholder="Enter your confidential portal password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                 </div>
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Default universal password:</span>
-                  <strong style={{ color: 'var(--accent-blue)', letterSpacing: '0.5px' }}>MSA123</strong>
-                  <span>(or your personal password)</span>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                  <span>Individual password required. Click &quot;Create / Set Password&quot; below if you need to configure one.</span>
                 </div>
               </div>
 
@@ -496,7 +495,7 @@ export default function LoginPage() {
                   Create Your Password
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  All accounts can sign in immediately using universal password <strong style={{ color: 'var(--accent-blue)' }}>MSA123</strong>. You can set or change to your own confidential password below at any time.
+                  Set or change to your own confidential password below at any time to access your portal account securely.
                 </div>
               </div>
 

@@ -88,7 +88,7 @@ const DEFAULT_LOGS_SEED: any[] = [
   }
 ];
 
-const DEFAULT_TASKS_SEED: any[] = [];
+const DEFAULT_TASKS_SEED: any[] = JSON.parse(JSON.stringify(FALL_2026_TASKS));
 export { FALL_2026_TASKS };
 
 const DEFAULT_HATS_SEED: HatRecord[] = [
@@ -442,6 +442,7 @@ if (!g.__memoryMeetings) g.__memoryMeetings = DEFAULT_MEETINGS_SEED;
 if (!g.__memoryCommittees) g.__memoryCommittees = OFFICIAL_FACULTY_COMMITTEES;
 if (!g.__memorySubscriptions) g.__memorySubscriptions = [];
 if (!g.__memoryDeanSlots) g.__memoryDeanSlots = DEFAULT_DEAN_SLOTS;
+if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
 
 async function ensureInitialized(): Promise<void> {
   const db = getD1();
@@ -498,6 +499,12 @@ async function ensureInitialized(): Promise<void> {
       if (Array.isArray(disk.committees)) g.__memoryCommittees = disk.committees;
       if (Array.isArray(disk.push_subscriptions)) g.__memorySubscriptions = disk.push_subscriptions;
       if (Array.isArray(disk.dean_availability_slots)) g.__memoryDeanSlots = disk.dean_availability_slots;
+      if (Array.isArray(disk.password_reset_tokens)) g.__memoryPasswordResetTokens = disk.password_reset_tokens;
+      if (Array.isArray(disk.notifications)) g.__inAppNotifications = disk.notifications;
+      if (Array.isArray(disk.notification_queue)) g.__emailNotificationQueue = disk.notification_queue;
+      if (Array.isArray(disk.sheet_mappings)) g.__sheetMappings = disk.sheet_mappings;
+      if (Array.isArray(disk.sheet_sync_logs)) g.__sheetSyncLogs = disk.sheet_sync_logs;
+      if (Array.isArray(disk.sheet_conflicts)) g.__sheetConflicts = disk.sheet_conflicts;
 
       const baseStaff = JSON.parse(JSON.stringify(INITIAL_STAFF_SEED));
       const existingIds = new Set(baseStaff.map((u: any) => u.id));
@@ -536,6 +543,12 @@ export async function persistCurrentState(): Promise<void> {
       committees: g.__memoryCommittees || [],
       push_subscriptions: g.__memorySubscriptions || [],
       dean_availability_slots: g.__memoryDeanSlots || DEFAULT_DEAN_SLOTS,
+      password_reset_tokens: g.__memoryPasswordResetTokens || [],
+      notifications: g.__inAppNotifications || [],
+      notification_queue: g.__emailNotificationQueue || [],
+      sheet_mappings: g.__sheetMappings || [],
+      sheet_sync_logs: g.__sheetSyncLogs || [],
+      sheet_conflicts: g.__sheetConflicts || [],
     });
   } catch {}
 }
@@ -659,7 +672,14 @@ export async function queryAll<T = any>(sql: string, params: any[] = []): Promis
   }
 
   if (normalizedSql.includes('from activity_logs')) {
-    return allLogs.map(l => {
+    let filteredLogs = allLogs;
+    if (normalizedSql.includes('where') && (normalizedSql.includes('l.user_id = ?') || normalizedSql.includes('user_id = ?'))) {
+      const uId = Number(params[0]);
+      if (uId) {
+        filteredLogs = filteredLogs.filter(l => l.user_id === uId);
+      }
+    }
+    return filteredLogs.map(l => {
       const user = allStaff.find(u => u.id === l.user_id);
       return {
         ...l,
@@ -770,6 +790,13 @@ export async function queryFirst<T = any>(sql: string, params: any[] = []): Prom
     const user = allStaff.find(u => u.email.toLowerCase() === email && u.id !== excludeId);
     return (user ? { ...user, status: 'active' } : null) as T | null;
   }
+
+  if (normalizedSql.includes('from users') && (normalizedSql.includes('where lower(email) = ? or id = ?') || normalizedSql.includes('where email = ? or id = ?'))) {
+    const email = String(params[0] || '').toLowerCase().trim();
+    const id = Number(params[1]);
+    const user = allStaff.find(u => (email && u.email.toLowerCase() === email) || (id && u.id === id));
+    return (user ? { ...user, status: 'active' } : null) as T | null;
+  }
   
   if (normalizedSql.includes('from users') && (normalizedSql.includes('email = ?') || normalizedSql.includes('email) = ?') || normalizedSql.includes('lower(email) = ?') || normalizedSql.includes('email ='))) {
     if (normalizedSql.includes('id !=') || normalizedSql.includes('id <>')) {
@@ -787,6 +814,13 @@ export async function queryFirst<T = any>(sql: string, params: any[] = []): Prom
     const id = Number(params[0]);
     const user = allStaff.find(u => u.id === id);
     return (user ? { ...user, status: 'active' } : null) as T | null;
+  }
+
+  if (normalizedSql.includes('from password_reset_tokens') && normalizedSql.includes('where token_hash = ?')) {
+    const hash = String(params[0]);
+    if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
+    const record = g.__memoryPasswordResetTokens.find((r: any) => r.token_hash === hash);
+    return (record ? { ...record } : null) as T | null;
   }
 
   if (normalizedSql.includes('from sessions s') && normalizedSql.includes('where s.id = ?')) {
@@ -816,13 +850,13 @@ export async function queryFirst<T = any>(sql: string, params: any[] = []): Prom
   return null;
 }
 
-export async function execute(sql: string, params: any[] = []): Promise<{ lastInsertRowid: number }> {
+export async function execute(sql: string, params: any[] = []): Promise<{ lastInsertRowid: number; changes?: number }> {
   const db = getD1();
   if (db) {
     try {
       const stmt = params.length > 0 ? db.prepare(sql).bind(...params) : db.prepare(sql);
       const res = await stmt.run();
-      return { lastInsertRowid: Number(res.meta?.last_row_id || 0) };
+      return { lastInsertRowid: Number(res.meta?.last_row_id || 0), changes: Number(res.meta?.changes ?? (res.meta?.rows_written ?? 0)) };
     } catch (e) {
       console.warn('D1 execute fallback:', e);
     }
@@ -843,6 +877,103 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
   if (normalizedSql.includes('delete from sessions where id = ?')) {
     memorySessions.delete(String(params[0]));
     return { lastInsertRowid: 0 };
+  }
+
+  if (normalizedSql.includes('delete from sessions where user_id = ?')) {
+    const uid = Number(params[0]);
+    let count = 0;
+    for (const [sid, sess] of memorySessions.entries()) {
+      if (sess.user_id === uid) {
+        memorySessions.delete(sid);
+        count++;
+      }
+    }
+    return { lastInsertRowid: 0, changes: count };
+  }
+
+  // Password Reset & Verification Tokens
+  if (normalizedSql.includes('insert into password_reset_tokens')) {
+    if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
+    const newRecord = {
+      id: String(params[0]),
+      user_id: Number(params[1]),
+      token_hash: String(params[2]),
+      expires_at: String(params[3]),
+      created_by_id: Number(params[4]),
+      purpose: params[5] ? String(params[5]) : 'recovery',
+      created_at: new Date().toISOString(),
+      used_at: null,
+      attempts: 0,
+    };
+    g.__memoryPasswordResetTokens.push(newRecord);
+    await persistCurrentState();
+    return { lastInsertRowid: 1, changes: 1 };
+  }
+
+  if (normalizedSql.includes('update password_reset_tokens set used_at = ? where token_hash = ? and used_at is null')) {
+    if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
+    const usedAt = String(params[0]);
+    const hash = String(params[1]);
+    const record = g.__memoryPasswordResetTokens.find((r: any) => r.token_hash === hash);
+    if (record && !record.used_at) {
+      record.used_at = usedAt;
+      await persistCurrentState();
+      return { lastInsertRowid: 0, changes: 1 };
+    }
+    return { lastInsertRowid: 0, changes: 0 };
+  }
+
+  if (normalizedSql.includes('update password_reset_tokens set used_at = null where token_hash = ?')) {
+    if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
+    const hash = String(params[0]);
+    const record = g.__memoryPasswordResetTokens.find((r: any) => r.token_hash === hash);
+    if (record) {
+      record.used_at = null;
+      await persistCurrentState();
+      return { lastInsertRowid: 0, changes: 1 };
+    }
+    return { lastInsertRowid: 0, changes: 0 };
+  }
+
+  if (normalizedSql.includes('update password_reset_tokens set used_at = ? where user_id = ? and purpose = ? and used_at is null')) {
+    if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
+    const usedAt = String(params[0]);
+    const uid = Number(params[1]);
+    const purpose = String(params[2]);
+    let count = 0;
+    for (const r of g.__memoryPasswordResetTokens) {
+      if (r.user_id === uid && (r.purpose === purpose || !r.purpose) && !r.used_at) {
+        r.used_at = usedAt;
+        count++;
+      }
+    }
+    if (count > 0) await persistCurrentState();
+    return { lastInsertRowid: 0, changes: count };
+  }
+
+  if (normalizedSql.includes('update password_reset_tokens set used_at = ? where token_hash = ?')) {
+    if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
+    const usedAt = String(params[0]);
+    const hash = String(params[1]);
+    const record = g.__memoryPasswordResetTokens.find((r: any) => r.token_hash === hash);
+    if (record) {
+      record.used_at = usedAt;
+      await persistCurrentState();
+      return { lastInsertRowid: 0, changes: 1 };
+    }
+    return { lastInsertRowid: 0, changes: 0 };
+  }
+
+  if (normalizedSql.includes('update password_reset_tokens set attempts = attempts + 1 where token_hash = ?')) {
+    if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
+    const hash = String(params[0]);
+    const record = g.__memoryPasswordResetTokens.find((r: any) => r.token_hash === hash);
+    if (record) {
+      record.attempts = (record.attempts || 0) + 1;
+      await persistCurrentState();
+      return { lastInsertRowid: 0, changes: 1 };
+    }
+    return { lastInsertRowid: 0, changes: 0 };
   }
 
   // Users: Registration
@@ -1054,23 +1185,72 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
   if (normalizedSql.includes('update tasks')) {
     // Bulk Update
     if (normalizedSql.includes('where id in')) {
-      const allowedIds = new Set(params.map(Number));
-      (g.__memoryTasks || []).forEach((t: any) => {
-        if (allowedIds.has(Number(t.id))) {
-          if (normalizedSql.includes('dean_acknowledged = 1')) {
-            if (t.status === 'done') t.dean_acknowledged = 1;
+      const setMatch = sql.match(/SET\s+([\s\S]+?)\s+WHERE/i);
+      let updatedCount = 0;
+      if (setMatch) {
+        const clauses = setMatch[1].split(',').map((c: string) => c.trim());
+        let paramIdx = 0;
+        const updates: Record<string, any> = {};
+
+        for (const clause of clauses) {
+          const parts = clause.split('=');
+          if (parts.length >= 2) {
+            const col = parts[0].trim().toLowerCase();
+            const valRaw = parts.slice(1).join('=').trim();
+            if (valRaw.includes('?')) {
+              const val = params[paramIdx++];
+              if (['dean_acknowledged', 'is_confidential', 'tr', 'assigned_to_id', 'assigned_by_id'].includes(col)) {
+                updates[col] = val !== null && val !== undefined ? Number(val) : null;
+              } else if (['hat_id', 'attachment_size'].includes(col)) {
+                updates[col] = val ? Number(val) : null;
+              } else if (col === 'deadline') {
+                updates[col] = val ? new Date(val).toISOString() : null;
+              } else if (col === 'completed_at') {
+                if (val === 'done') {
+                  updates[col] = new Date().toISOString();
+                }
+              } else {
+                updates[col] = val;
+              }
+            } else if (valRaw.toLowerCase().includes('current_timestamp')) {
+              updates[col] = new Date().toISOString();
+            } else if (valRaw === '1' || valRaw === '0') {
+              updates[col] = Number(valRaw);
+            }
           }
-          if (normalizedSql.includes('status = ?') && params.length > 0) {
-            t.status = params[0];
-          }
-          if (normalizedSql.includes('priority = ?') && params.length > 0) {
-            t.priority = params[0];
-          }
-          t.updated_at = new Date().toISOString();
         }
-      });
-      await persistCurrentState();
-      return { lastInsertRowid: 0 };
+
+        const rawTargetIds = params.slice(paramIdx);
+        const allowedIds = new Set(rawTargetIds.map(Number).filter(n => !isNaN(n)));
+
+        if (allowedIds.size > 0) {
+          (g.__memoryTasks || []).forEach((t: any) => {
+            if (allowedIds.has(Number(t.id))) {
+              if (normalizedSql.includes("and status = 'done'") && t.status !== 'done') {
+                return;
+              }
+              for (const [key, val] of Object.entries(updates)) {
+                t[key] = val;
+              }
+              if ('assigned_to_id' in updates && updates.assigned_to_id) {
+                const assignee = (g.__memoryUsers || []).find((u: any) => Number(u.id) === Number(updates.assigned_to_id));
+                if (assignee) {
+                  t.assignee_name = assignee.full_name;
+                  t.assignee_title = assignee.title;
+                  t.assignee_avatar = assignee.avatar;
+                  if (!updates.department) {
+                    t.department = assignee.department;
+                  }
+                }
+              }
+              t.updated_at = new Date().toISOString();
+              updatedCount++;
+            }
+          });
+          await persistCurrentState();
+        }
+      }
+      return { lastInsertRowid: 0, changes: updatedCount };
     }
 
     // Single Task Update

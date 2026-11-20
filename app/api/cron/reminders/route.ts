@@ -1,6 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import { queryAll, execute, getAllMeetings, getPushSubscriptions } from '@/lib/db';
+import { renderDeadlineReminderTemplate } from '@/lib/email';
+import { createInAppNotification, enqueueNotificationEmail, processNotificationQueue } from '@/lib/notifications';
 
 export async function GET(req: Request) {
   return handleCronReminders(req);
@@ -13,7 +15,14 @@ export async function POST(req: Request) {
 async function handleCronReminders(req: Request) {
   try {
     // 1. Strict Authentication Guard: CRON_SECRET is strictly mandatory
-    const expectedSecret = (globalThis as any).CRON_SECRET || process.env.CRON_SECRET || 'dev-cron-secret-faculty-2026';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const configuredSecret = (globalThis as any).CRON_SECRET || process.env.CRON_SECRET;
+    
+    // Strict enforcement: Never allow hardcoded dev secrets in production
+    const expectedSecret = isProduction 
+      ? configuredSecret 
+      : (configuredSecret || 'dev-cron-secret-faculty-2026');
+
     if (!expectedSecret || expectedSecret.trim() === '') {
       console.error('[SECURITY BLOCK] CRON_SECRET is not configured on server.');
       return NextResponse.json(

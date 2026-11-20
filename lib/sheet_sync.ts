@@ -1,3 +1,4 @@
+import { FALL_2026_TASKS } from './fall_2026_seed_tasks';
 import { persistCurrentState } from './db';
 import { INITIAL_STAFF_SEED, QUADRUPLET_ALIASES } from './staff_seed';
 
@@ -258,9 +259,10 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
     const newTasksList: any[] = [];
     for (const t of currentTasks) {
       const tKey = (t.title || '').toLowerCase().trim();
-      const isLegacy94Mock = Number(t.id) <= 94 && !t.source && !sheetTaskMap.has(tKey);
-      if (isLegacy94Mock) {
-        // Purge obsolete legacy mock tasks
+      // Preserve official Fall 2026 tasks
+      if (t.source === 'portal' || t.source === 'manual' || !t.source) {
+        t.source = 'portal';
+        newTasksList.push(t);
         continue;
       }
 

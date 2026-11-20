@@ -3,7 +3,13 @@
  */
 export function parseAssignedMembers(raw: any): string[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
+  if (Array.isArray(raw)) {
+    return raw.map((item: any) => {
+      if (typeof item === 'string') return item.trim();
+      if (item && typeof item === 'object') return (item.name || item.full_name || item.email || '').trim();
+      return String(item || '').trim();
+    }).filter((s): s is string => s.length > 0);
+  }
   if (typeof raw === 'string') {
     const trimmed = raw.trim();
     if (!trimmed) return [];
@@ -11,7 +17,11 @@ export function parseAssignedMembers(raw: any): string[] {
       try {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
-          return parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
+          return parsed.map((item: any) => {
+            if (typeof item === 'string') return item.trim();
+            if (item && typeof item === 'object') return (item.name || item.full_name || item.email || '').trim();
+            return String(item || '').trim();
+          }).filter((s): s is string => s.length > 0);
         }
       } catch {}
     }

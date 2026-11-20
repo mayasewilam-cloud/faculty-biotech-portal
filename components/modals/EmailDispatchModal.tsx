@@ -96,7 +96,22 @@ export const EmailDispatchModal: React.FC<EmailDispatchModalProps> = ({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to dispatch email');
 
-      setStatusMessage({ type: 'success', text: `Email directive simulated and logged: ${data.message}` });
+      if (data.delivery_confirmed) {
+        setStatusMessage({
+          type: 'success',
+          text: `✅ Email delivered via SMTP (ID: ${data.messageId || 'confirmed'}). In-app notification created.`,
+        });
+      } else if (data.email_status === 'queued') {
+        setStatusMessage({
+          type: 'success',
+          text: `📬 In-app notification created in portal. Outbound email is queued (SMTP transport is currently offline/unconfigured).`,
+        });
+      } else {
+        setStatusMessage({
+          type: 'error',
+          text: `⚠️ Notification saved, but outbound email failed: ${data.warning || data.message || 'SMTP transmission failure'}.`,
+        });
+      }
       if (onDispatchSuccess) onDispatchSuccess();
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: err.message || 'Dispatch failed' });

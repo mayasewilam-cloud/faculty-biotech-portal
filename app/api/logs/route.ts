@@ -32,8 +32,10 @@ export async function GET(req: Request) {
 
     const params: any[] = [];
 
-    // If user is a professor/staff, only show their own logs
-    if (user.role === 'professor' || user.role === 'staff') {
+    const isLeadership = user.role === 'dean' || user.role === 'admin' || user.role === 'vice_dean' || user.id === 99 || user.id === 6496 || user.id === 6591;
+
+    // If user is non-leadership, only show their own logs
+    if (!isLeadership) {
       query += ` AND l.user_id = ?`;
       params.push(user.id);
     } else if (userId && userId !== 'all') {
@@ -60,7 +62,11 @@ export async function GET(req: Request) {
     query += ` ORDER BY l.id DESC LIMIT ?`;
     params.push(limit);
 
-    const logs = await queryAll(query, params);
+    const rawLogs = await queryAll(query, params);
+    let logs = rawLogs || [];
+    if (!isLeadership) {
+      logs = logs.filter((l: any) => l.user_id === user.id);
+    }
 
     return NextResponse.json({ logs });
   } catch (error: any) {

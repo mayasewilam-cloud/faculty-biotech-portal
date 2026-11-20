@@ -113,6 +113,27 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   const isDean = currentUser?.role === 'dean' || currentUser?.role === 'admin' || currentUser?.id === 99 || currentUser?.id === 6496;
 
+    // Fetch persistent server-side in-app notifications
+  const [serverNotifications, setServerNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchServerNotifs = async () => {
+      try {
+        const res = await fetch('/api/notifications');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && Array.isArray(data.notifications)) {
+            setServerNotifications(data.notifications);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchServerNotifs();
+    const interval = setInterval(fetchServerNotifs, 30000); // 30s poll
+    return () => { isMounted = false; clearInterval(interval); };
+  }, [currentUser?.id]);
+
   // Load read notification IDs from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && currentUser?.id) {
@@ -242,13 +263,20 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const unreadItems = notifications.filter((n) => !readIds.has(n.id));
   const unreadCount = unreadItems.length;
 
-  const markAsRead = (id: string) => {
+    const markAsRead = async (id: string) => {
     const updated = new Set(readIds);
     updated.add(id);
     setReadIds(updated);
     if (currentUser?.id) {
       localStorage.setItem(`msa_notifications_read_${currentUser.id}`, JSON.stringify(Array.from(updated)));
     }
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+    } catch (e) {}
   };
 
   const markAllAsRead = () => {

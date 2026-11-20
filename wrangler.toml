@@ -1,0 +1,17 @@
+name = "faculty-of-biotechnology"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "faculty-db"
+database_id = "653e7d4a-b620-49d1-837a-444ad8ab4e17"
+
+[[r2_buckets]]
+binding = "UPLOADS_BUCKET"
+bucket_name = "faculty-uploads"
+
+[triggers]
+crons = ["0 8 * * 1-5"]
+

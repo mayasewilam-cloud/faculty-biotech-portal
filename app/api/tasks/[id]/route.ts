@@ -2,6 +2,8 @@ import { parseAssignedMembers } from '@/lib/taskFilters';
 import { NextResponse } from 'next/server';
 import { queryFirst, execute } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { renderRevisionRequestTemplate, renderDeanApprovalTemplate } from '@/lib/email';
+import { createInAppNotification, enqueueNotificationEmail, processNotificationQueue } from '@/lib/notifications';
 
 // PATCH /api/tasks/[id]: Updates task status, completion notes, or dean acknowledgment
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
