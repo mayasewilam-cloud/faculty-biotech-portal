@@ -1,4 +1,5 @@
-import { isUserAssignedToTask, parseAssignedMembers } from '@/lib/taskFilters';
+import { isUserAssignedToTask, parseAssignedMembers, filterTasksByScope } from '@/lib/taskFilters';
+import { resolveStaffMember, isNameMatchingStaff, normalizeStaffName } from '@/lib/staff_matcher';
 import { syncTasksFromGoogleSheet } from '@/lib/sheet_sync';
 import { renderTaskDispatchTemplate, renderMultiMemberAssignmentTemplate, renderSupervisorAssignmentTemplate } from '@/lib/email';
 import { createInAppNotification, enqueueNotificationEmail, processNotificationQueue } from '@/lib/notifications';
@@ -71,10 +72,17 @@ export async function GET(req: Request) {
     // Role-based visibility: match direct id, task owner, or multi-member assignment for ALL non-leadership
     if (!isLeadership) {
       const cleanName = (user.full_name || '').replace(/^(prof\.|dr\.|assoc\.\s*prof\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/gi, '').trim();
-      const namePattern = `%${user.full_name}%`;
-      const cleanPattern = `%${cleanName}%`;
-      query += ` AND (t.assigned_to_id = ? OR t.assigned_by_id = ? OR t.task_owner_id = ? OR t.assigned_members LIKE ? OR t.assigned_members LIKE ? OR t.assignee_name LIKE ? OR t.assignee_name LIKE ? OR t.committee_id IN (SELECT id FROM committees WHERE chair_id = ?))`;
-      params.push(user.id, user.id, user.id, namePattern, cleanPattern, namePattern, cleanPattern, user.id);
+      const tokens = cleanName.split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mr', 'ms', 'assoc'].includes(t.toLowerCase()));
+      
+      let memberClause = 't.assigned_members LIKE ? OR t.assigned_members LIKE ?';
+      const memberParams = [`%${user.full_name}%`, `%${cleanName}%`];
+      for (const tok of tokens) {
+        memberClause += ' OR t.assigned_members LIKE ?';
+        memberParams.push(`%${tok}%`);
+      }
+
+      query += ` AND (t.assigned_to_id = ? OR t.assigned_by_id = ? OR t.task_owner_id = ? OR (${memberClause}) OR assignee.full_name LIKE ? OR assignee.email LIKE ? OR t.committee_id IN (SELECT id FROM committees WHERE chair_id = ?))`;
+      params.push(user.id, user.id, user.id, ...memberParams, `%${cleanName}%`, user.email || '', user.id);
     } else if (assigneeId && assigneeId !== 'all') {
       query += ` AND t.assigned_to_id = ?`;
       params.push(assigneeId);
@@ -172,7 +180,7 @@ export async function GET(req: Request) {
 
     // Role-based visibility: non-leadership only sees their assigned tasks
     if (!isLeadership) {
-      filtered = filtered.filter((t: any) => isUserAssignedToTask(t, user));
+      filtered = filterTasksByScope(filtered, user, false);
     } else if (assigneeId && assigneeId !== 'all') {
       const aId = Number(assigneeId);
       filtered = filtered.filter((t: any) => t.assigned_to_id === aId || t.task_owner_id === aId);
@@ -305,19 +313,16 @@ export async function POST(req: Request) {
       const resolvedIds: number[] = Array.isArray(targetList) ? targetList.map(Number) : [];
       for (const mName of assignedMembersList) {
         if (!mName || typeof mName !== 'string') continue;
-        const norm = (s: string) => (s || '').toLowerCase().replace(/^(prof\.|dr\.|assoc\.\s*prof\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/gi, '').replace(/[^a-z0-9]/g, '');
-        const cleanM = norm(mName);
-        if (!cleanM) continue;
-        const match = allStaffUsers.find((u: any) => {
-          const uClean = norm(u.full_name);
-          return uClean && (uClean === cleanM || uClean.includes(cleanM) || cleanM.includes(uClean));
-        });
+        const match = resolveStaffMember(mName, allStaffUsers);
         if (match && !resolvedIds.includes(match.id)) {
           resolvedIds.push(match.id);
         }
       }
+      // If specific staff members were resolved from assigned_members, and the current user is leadership (e.g. Dean 6496),
+      // ensure leadership ID is not accidentally retained as a task recipient unless explicitly designated.
       if (resolvedIds.length > 0) {
-        targetList = resolvedIds;
+        const staffOnlyIds = resolvedIds.filter(id => id !== user.id || assignedMembersList.some(m => isNameMatchingStaff(m, user)));
+        targetList = staffOnlyIds.length > 0 ? staffOnlyIds : resolvedIds;
       }
     }
 
@@ -463,13 +468,16 @@ export async function POST(req: Request) {
       // Phase 3.11: Institutional In-App Notification & Real Email Dispatch
       const isSupervisorTask = (title || '').toLowerCase().includes('supervisor') || (category || '').toLowerCase().includes('supervisor');
       const notifType = isSupervisorTask ? 'supervisor_assignment' : (assignedMembersList.length > 1 ? 'multi_member_assignment' : 'task_dispatch');
+      const assignerDisplayName = user.title && user.full_name.toLowerCase().startsWith(user.title.toLowerCase())
+        ? user.full_name
+        : `${user.title || ''} ${user.full_name}`.trim();
 
       // 1. Create In-App Notification (Guaranteed delivery in portal)
       await createInAppNotification({
         userId: assignee.id,
         userEmail: assignee.email,
         title: isSupervisorTask ? `Supervisor Appointment: ${title}` : `New Task Directive: ${title}`,
-        message: `Assigned by ${user.title || ''} ${user.full_name}. Priority: ${priority.toUpperCase()}. Due: ${new Date(deadline).toLocaleDateString('en-GB')}.`,
+        message: `Assigned by ${assignerDisplayName}. Priority: ${priority.toUpperCase()}. Due: ${new Date(deadline).toLocaleDateString('en-GB')}.`,
         type: notifType,
         relatedTaskId: taskId,
       });

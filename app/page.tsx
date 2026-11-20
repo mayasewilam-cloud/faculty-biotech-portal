@@ -1143,6 +1143,14 @@ export default function DashboardPage() {
       resolvedRecipients.push(effectiveAssigneeId);
     }
 
+    // If staff recipients were resolved and assignee fell back to leadership, set primary assignee to team lead
+    if (resolvedRecipients.length > 0 && effectiveAssigneeId === (currentUser?.id || 6496)) {
+      const nonSelf = resolvedRecipients.find(id => id !== (currentUser?.id || 6496));
+      if (nonSelf) {
+        effectiveAssigneeId = nonSelf;
+      }
+    }
+
     setIsCreatingTask(true);
     try {
       if (dispatchMode === 'department' || dispatchMode === 'all') {

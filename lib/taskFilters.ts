@@ -31,6 +31,7 @@ export function parseAssignedMembers(raw: any): string[] {
 }
 
 import { Task, User } from '@/types';
+import { isNameMatchingStaff, normalizeStaffName } from './staff_matcher';
 
 /**
  * Safely parse a date string into a Date object or null
@@ -76,9 +77,8 @@ export function isUserAssignedToTask(task: Task, user: User | null): boolean {
   if (task.assignee_email && userEmail && task.assignee_email.toLowerCase() === userEmail) {
     return true;
   }
-  if (task.assignee_name && userFullName) {
-    const aLower = task.assignee_name.toLowerCase().trim();
-    if (aLower === userFullName || aLower.includes(userFullName) || userFullName.includes(aLower)) {
+  if (task.assignee_name) {
+    if (isNameMatchingStaff(task.assignee_name, user)) {
       return true;
     }
   }
@@ -86,17 +86,9 @@ export function isUserAssignedToTask(task: Task, user: User | null): boolean {
   // 3. Multi-Member assigned_members array or JSON/comma string
   if (task.assigned_members) {
     const members = parseAssignedMembers(task.assigned_members);
-
-    const uClean = userFullName.replace(/^(prof\.|dr\.|la\.|ta\.|ms\.|mrs\.|mr\.)\s*/, '').trim();
-
     for (const m of members) {
       if (!m) continue;
-      const mLower = m.toLowerCase().trim();
-      if (mLower === userFullName || userFullName.includes(mLower) || mLower.includes(userFullName)) {
-        return true;
-      }
-      const mClean = mLower.replace(/^(prof\.|dr\.|la\.|ta\.|ms\.|mrs\.|mr\.)\s*/, '').trim();
-      if (mClean && uClean && (mClean === uClean || mClean.includes(uClean) || uClean.includes(mClean))) {
+      if (isNameMatchingStaff(m, user)) {
         return true;
       }
     }
@@ -112,7 +104,22 @@ export function isUserAssignedToTask(task: Task, user: User | null): boolean {
  */
 export function filterTasksByScope(tasks: Task[], currentUser: User | null, isDean: boolean): Task[] {
   if (isDean || !currentUser) return tasks;
-  return tasks.filter((t) => isUserAssignedToTask(t, currentUser));
+  const userTasks = tasks.filter((t) => isUserAssignedToTask(t, currentUser));
+
+  // If the user has a directly assigned task in a group_id, deduplicate other team members' parallel tasks
+  const directGroupIds = new Set<string>();
+  for (const t of userTasks) {
+    if (t.group_id && t.assigned_to_id === currentUser.id) {
+      directGroupIds.add(t.group_id);
+    }
+  }
+
+  return userTasks.filter((t) => {
+    if (t.group_id && directGroupIds.has(t.group_id)) {
+      return t.assigned_to_id === currentUser.id;
+    }
+    return true;
+  });
 }
 
 /**

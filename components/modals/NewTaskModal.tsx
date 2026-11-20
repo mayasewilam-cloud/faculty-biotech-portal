@@ -6,6 +6,7 @@ import { Users2, Paperclip, FileText, Send, Sparkles, Plus, Trash2, CheckCircle2
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
 import { FALL_2026_TASK_ROSTER } from '@/lib/fall_2026_tasks_roster';
 import { QUADRUPLET_ALIASES } from '@/lib/staff_seed';
+import { resolveStaffMember } from '@/lib/staff_matcher';
 import { INSTITUTIONAL_PILLARS, PillarTaskTemplate } from '@/lib/pillar_catalog';
 import { FileUploadZone } from '@/components/common/FileUploadZone';
 
@@ -21,48 +22,7 @@ export const formatUserDisplayName = (u?: any, fallbackId?: number) => {
 };
 
 export const resolveTaskMemberUser = (mName: string, users: any[]) => {
-  if (!mName) return undefined;
-  const normAlpha = (t: string) => {
-    if (!t) return '';
-    let withoutTitle = t.toLowerCase();
-    withoutTitle = withoutTitle.replace(/^(prof\.|dr\.|assoc\.\s*prof\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/gi, '');
-    withoutTitle = withoutTitle.replace(/^(prof\.|dr\.|assoc\.\s*prof\.|ms\.|mr\.|eng\.|la\.|ta\.|ra\.|l\.a\.|t\.a\.|mrs\.)\s*/gi, '');
-    return withoutTitle.replace(/[^a-z0-9]/g, '');
-  };
-
-  const cleanM = normAlpha(mName);
-  if (!cleanM) return undefined;
-
-  for (const [k, v] of Object.entries(QUADRUPLET_ALIASES || {})) {
-    if (normAlpha(k) === cleanM) {
-      const target = normAlpha(v);
-      const matched = users.find(u => normAlpha(u.full_name).includes(target) || target.includes(normAlpha(u.full_name)));
-      if (matched) return matched;
-    }
-  }
-
-  const directMatch = users.find(u => {
-    const uClean = normAlpha(u.full_name);
-    return cleanM === uClean || cleanM.includes(uClean) || uClean.includes(cleanM);
-  });
-  if (directMatch) return directMatch;
-
-  const mTokens = mName.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms', 'assoc'].includes(t));
-  if (mTokens.length >= 1) {
-    for (const u of users) {
-      const uTokens = u.full_name.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((t: string) => t.length > 2 && !['prof', 'dr', 'la', 'ta', 'mrs', 'ms', 'assoc'].includes(t));
-      if (mTokens.length >= 2 && uTokens.length >= 2) {
-        if (mTokens[0] === uTokens[0] && (mTokens[mTokens.length - 1] === uTokens[uTokens.length - 1] || mTokens[1] === uTokens[1])) {
-          return u;
-        }
-      } else if (mTokens.length >= 1 && uTokens.length >= 1) {
-        if (mTokens[0] === uTokens[0]) {
-          return u;
-        }
-      }
-    }
-  }
-  return undefined;
+  return resolveStaffMember(mName, users);
 };
 
 interface NewTaskModalProps {
