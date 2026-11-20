@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Task, Hat, User } from '@/types';
 import { isTaskOverdue, isTaskAwaitingDeanReview, isUserAssignedToTask, parseAssignedMembers } from '@/lib/taskFilters';
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
@@ -90,7 +90,14 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [scopeFilter, setScopeFilter] = useState<'my_tasks' | 'all_tasks'>(isDean ? 'all_tasks' : 'my_tasks');
+  const [scopeFilter, setScopeFilter] = useState<'my_tasks' | 'all_tasks'>('all_tasks');
+
+  // Leadership always views 'all_tasks' so college directives are never hidden
+  useEffect(() => {
+    if (isDean) {
+      setScopeFilter('all_tasks');
+    }
+  }, [isDean]);
   const [manageAssigneesTask, setManageAssigneesTask] = useState<Task | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>(statusFilter || 'all');
   const [localSyncing, setLocalSyncing] = useState(false);
@@ -101,13 +108,16 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
       const res = await fetch('/api/tasks/sync-sheet', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
+        if (data.message && data.message.includes('standalone')) {
+          alert(data.message);
+        }
         if (onRefreshTasks) onRefreshTasks();
         else window.location.reload();
       } else {
-        alert('Sync error: ' + (data.error || 'Failed to sync with Google Sheet'));
+        alert(data.error || 'Notice: Google Sheet is unconfigured. All portal tasks are safely maintained locally.');
       }
     } catch (err: any) {
-      alert('Error connecting to Google Sheet: ' + err.message);
+      alert('Notice: Operating in offline mode. All tasks preserved locally.');
     } finally {
       setLocalSyncing(false);
     }

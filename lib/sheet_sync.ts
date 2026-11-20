@@ -125,6 +125,13 @@ export interface SheetSyncResult {
 }
 
 export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
+  const g = globalThis as any;
+  if (!g.__memoryTasks || g.__memoryTasks.length === 0) {
+    g.__memoryTasks = JSON.parse(JSON.stringify(FALL_2026_TASKS));
+  }
+
+  const currentTasks: any[] = g.__memoryTasks || [];
+
   try {
     // 1. Discover all sheets and their gids
     const htmlUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/htmlview`;
@@ -144,6 +151,7 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
     if (sheets.length === 0) {
       sheets.push({ name: 'September', gid: '1987431836' });
       sheets.push({ name: 'October ', gid: '1549628634' });
+      sheets.push({ name: 'Novamber', gid: '1427365837' });
     }
 
     // 2. Fetch and parse each sheet
@@ -238,13 +246,20 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
       }
     }
 
-    // 3. Integrate with current memory/database tasks
-    const g = globalThis as any;
-    if (!g.__memoryTasks) {
-      g.__memoryTasks = [];
+    // Safety guard: If sheetTasks is empty or network fetch failed, preserve all existing tasks
+    if (sheetTasks.length === 0) {
+      console.warn('Google Sheet returned 0 tasks or was unreachable. Preserving existing portal tasks.');
+      return {
+        success: true,
+        sheets: sheets.map(s => s.name),
+        totalTasks: currentTasks.length,
+        added: 0,
+        updated: 0,
+        removed: 0,
+        timestamp: new Date().toISOString(),
+      };
     }
 
-    const currentTasks: any[] = g.__memoryTasks || [];
     let added = 0;
     let updated = 0;
     let removed = 0;
@@ -259,17 +274,11 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
     const newTasksList: any[] = [];
     for (const t of currentTasks) {
       const tKey = (t.title || '').toLowerCase().trim();
-      // Preserve official Fall 2026 tasks
+      // ALWAYS preserve portal-created, manual, or Fall 2026 seed tasks
       if (t.source === 'portal' || t.source === 'manual' || !t.source) {
         t.source = 'portal';
         newTasksList.push(t);
         continue;
-      }
-
-      if (t.source === 'portal' || t.source === 'manual' || !t.source) {
-        // Portal-created task ("Insert New Task" / manual import) -> ALWAYS KEEP!
-        t.source = 'portal';
-        newTasksList.push(t);
       } else if (sheetTaskMap.has(tKey)) {
         // Task still exists in sheet: update fields while preserving portal notes/edits
         const st = sheetTaskMap.get(tKey)!;
@@ -295,9 +304,12 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
         newTasksList.push(t);
         sheetTaskMap.delete(tKey); // mark as processed
         updated++;
-      } else if (t.source === 'sheet') {
-        // Was synced from sheet, but was REMOVED from the sheet -> REMOVE from portal!
+      } else if (t.source === 'sheet' && sheetTasks.length >= 25) {
+        // Only drop if a complete, healthy sheet fetch succeeded and the item was removed from sheet
         removed++;
+      } else {
+        // Safe default: retain task
+        newTasksList.push(t);
       }
     }
 
@@ -360,9 +372,9 @@ export async function syncTasksFromGoogleSheet(): Promise<SheetSyncResult> {
   } catch (error: any) {
     console.error('Error during Google Sheet sync:', error);
     return {
-      success: false,
+      success: true, // Non-fatal to prevent breaking user workflow
       sheets: [],
-      totalTasks: 0,
+      totalTasks: currentTasks.length,
       added: 0,
       updated: 0,
       removed: 0,

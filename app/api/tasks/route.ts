@@ -15,8 +15,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Ensure live Google Sheet tasks are loaded if memory lacks sheet tasks
+    // Ensure baseline Fall 2026 directives and live Google Sheet tasks are loaded
     const g = globalThis as any;
+    if (!g.__memoryTasks || g.__memoryTasks.length === 0) {
+      const { FALL_2026_TASKS } = require('@/lib/fall_2026_seed_tasks');
+      g.__memoryTasks = JSON.parse(JSON.stringify(FALL_2026_TASKS));
+    }
     const hasSheetTasks = Array.isArray(g.__memoryTasks) && g.__memoryTasks.some((t: any) => t.source === 'sheet');
     if (!hasSheetTasks) {
       try {
@@ -244,15 +248,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Ensure live Google Sheet tasks are loaded if memory lacks sheet tasks
     const g = globalThis as any;
-    const hasSheetTasks = Array.isArray(g.__memoryTasks) && g.__memoryTasks.some((t: any) => t.source === 'sheet');
-    if (!hasSheetTasks) {
-      try {
-        await syncTasksFromGoogleSheet();
-      } catch (sheetErr) {
-        console.warn('Auto sync sheet in GET /api/tasks:', sheetErr);
-      }
+    if (!g.__memoryTasks || g.__memoryTasks.length === 0) {
+      const { FALL_2026_TASKS } = require('@/lib/fall_2026_seed_tasks');
+      g.__memoryTasks = JSON.parse(JSON.stringify(FALL_2026_TASKS));
     }
 
     const body = await req.json();

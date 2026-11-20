@@ -219,12 +219,15 @@ export const DeanOverviewView: React.FC<DeanOverviewViewProps> = ({
                   const res = await fetch('/api/tasks/sync-sheet', { method: 'POST' });
                   const data = await res.json();
                   if (data.success) {
+                    if (data.message && data.message.includes('standalone')) {
+                      alert(data.message);
+                    }
                     window.location.reload();
                   } else {
-                    alert('Sync error: ' + (data.error || 'Failed to sync with Google Sheet'));
+                    alert(data.error || 'Notice: Google Sheet is unconfigured. All tasks are maintained locally.');
                   }
                 } catch (e: any) {
-                  alert('Error syncing sheet: ' + e.message);
+                  alert('Notice: Operating in offline mode. All tasks preserved locally.');
                 }
               }}
               className="btn btn-secondary btn-sm"

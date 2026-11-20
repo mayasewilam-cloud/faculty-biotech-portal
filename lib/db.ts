@@ -429,9 +429,8 @@ const DEFAULT_DEAN_SLOTS: DeanAvailabilitySlot[] = [
 
 const g = globalThis as any;
 
-if (!g.__memoryTasks) g.__memoryTasks = DEFAULT_TASKS_SEED;
-if (g.__memoryTasks && g.__memoryTasks.length === 94 && g.__memoryTasks.every((t: any) => t.status === 'in_progress')) {
-  g.__memoryTasks = [];
+if (!g.__memoryTasks || g.__memoryTasks.length === 0) {
+  g.__memoryTasks = JSON.parse(JSON.stringify(FALL_2026_TASKS));
 }
 if (!g.__memoryHats) g.__memoryHats = DEFAULT_HATS_SEED;
 if (!g.__memoryHatMembers) g.__memoryHatMembers = DEFAULT_HAT_MEMBERS_SEED;
@@ -452,34 +451,10 @@ async function ensureInitialized(): Promise<void> {
   try {
     const disk = await loadStateFromDisk();
     if (disk) {
-      if (Array.isArray(disk.tasks)) {
-        // Discard legacy prototype mock tasks
-        const legacyMockTitles = new Set([
-          'submit naqaae accreditation course syllabi (bio301 & bio402)',
-          'dna sequencing lab safety audit & equipment log',
-          'week 4 lab attendance verification & student log',
-          'practical exam schedule publishing & lab prep',
-          'lecture hall reservation - 6th of october compensation sessions',
-          'newly hired teaching assistant evaluation form',
-          'newly hired staff laboratory tracker',
-          'upload the weekly plan and minutes of meeting- fall 2026',
-          'check tasks allocation - fall 2026',
-          'exam submission - level one & level two',
-          'the moderation committee for level one and level two',
-          'submission of special needs midterm and final exams with model answers',
-          'preparation of the monthly academic calendar',
-          'quality assurance awareness session for rubric design'
-        ]);
-
-        // Use persisted tasks (live Google Sheet tasks + portal-created tasks)
-        const isLegacy94Mock = disk.tasks.length === 94 && disk.tasks.every((t: any) => t.status === 'in_progress');
-        if (isLegacy94Mock) {
-          g.__memoryTasks = [];
-        } else {
-          g.__memoryTasks = disk.tasks;
-        }
-      } else {
-        g.__memoryTasks = [];
+      if (Array.isArray(disk.tasks) && disk.tasks.length > 0) {
+        g.__memoryTasks = disk.tasks;
+      } else if (!g.__memoryTasks || g.__memoryTasks.length === 0) {
+        g.__memoryTasks = JSON.parse(JSON.stringify(FALL_2026_TASKS));
       }
       if (Array.isArray(disk.hats)) {
         const hasLegacyHats = disk.hats.some((h: any) => h.name === 'RA N112' || h.name === 'Prototyping RA' || h.name === 'Accreditation & Quality Assurance Committee');
@@ -1093,7 +1068,9 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
 
   // Tasks: Insert
   if (normalizedSql.includes('insert into tasks')) {
-    if (!g.__memoryTasks) g.__memoryTasks = [];
+    if (!g.__memoryTasks || g.__memoryTasks.length === 0) {
+      g.__memoryTasks = JSON.parse(JSON.stringify(FALL_2026_TASKS));
+    }
     const newId = g.__memoryTasks.length > 0 ? Math.max(...g.__memoryTasks.map((t: any) => t.id)) + 1 : 1;
     const newTask: any = {
       id: newId,
