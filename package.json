@@ -12,8 +12,7 @@
     "deploy": "node scripts/deploy.mjs",
     "deploy:prod": "node scripts/deploy.mjs --release-prod",
     "pages:deploy": "node scripts/deploy.mjs --release-prod",
-    "test": "node scripts/test-e2e.mjs",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "test": "node scripts/test-e2e.mjs"
   },
   "keywords": [],
   "author": "",
@@ -23,10 +22,9 @@
     "@googleapis/sheets": "^18.1.2",
     "@types/nodemailer": "^8.0.2",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^13.0.3",
     "google-auth-library": "^11.3.2",
     "lucide-react": "^1.48.0",
-    "next": "^16.3.6",
+    "next": "16.4.6",
     "nodemailer": "^10.3.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
@@ -34,7 +32,6 @@
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.20.12",
     "@types/bcryptjs": "^2.4.6",
-    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "esbuild": "^0.28.2",
