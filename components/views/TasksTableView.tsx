@@ -184,6 +184,8 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [sortField, setSortField] = useState<'tr' | 'deadline' | 'title' | 'status' | 'owner' | 'priority'>('tr');
   const [sortAsc, setSortAsc] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(25);
 
   // Unique departments for filter
   const departments = useMemo(() => {
@@ -285,6 +287,18 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
       return sortAsc ? cmp : -cmp;
     });
   }, [tasks, isDean, currentUser, scopeFilter, selectedCategory, selectedStatus, selectedDept, selectedPriority, selectedOwner, selectedAssignee, search, sortField, sortAsc]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredTasks.length, scopeFilter, selectedCategory, selectedStatus, selectedDept, selectedPriority, selectedOwner, selectedAssignee, search]);
+
+  const totalPages = pageSize === 0 ? 1 : Math.max(1, Math.ceil(filteredTasks.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedTasks = useMemo(() => {
+    if (pageSize === 0) return filteredTasks;
+    const start = (safePage - 1) * pageSize;
+    return filteredTasks.slice(start, start + pageSize);
+  }, [filteredTasks, safePage, pageSize]);
 
   const handleExportSpreadsheet = () => {
     const headers = [
@@ -903,7 +917,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredTasks.map((task, idx) => {
+                paginatedTasks.map((task, idx) => {
                   const now = new Date();
                   const deadlineDate = task.deadline ? new Date(task.deadline) : null;
                   const isOverdue = deadlineDate !== null && deadlineDate < now && task.status !== 'done';
@@ -1535,6 +1549,77 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredTasks.length > 0 && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            borderTop: '1px solid var(--border)',
+            backgroundColor: 'rgba(15, 23, 42, 0.25)',
+            fontSize: '0.82rem',
+            color: 'var(--text-secondary)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span>
+                Showing{' '}
+                <strong style={{ color: 'var(--text-main)' }}>
+                  {pageSize === 0 ? 1 : (safePage - 1) * pageSize + 1}
+                </strong>
+                –
+                <strong style={{ color: 'var(--text-main)' }}>
+                  {pageSize === 0 ? filteredTasks.length : Math.min(safePage * pageSize, filteredTasks.length)}
+                </strong>{' '}
+                of <strong style={{ color: 'var(--text-main)' }}>{filteredTasks.length}</strong> tasks
+              </span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="form-input"
+                style={{ padding: '4px 8px', fontSize: '0.78rem', width: 'auto' }}
+                aria-label="Tasks per page"
+              >
+                <option value={25}>25 / page</option>
+                <option value={50}>50 / page</option>
+                <option value={100}>100 / page</option>
+                <option value={0}>Show All</option>
+              </select>
+            </div>
+
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  disabled={safePage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                >
+                  Previous
+                </button>
+                <span style={{ padding: '0 6px', fontWeight: 600, color: 'var(--text-main)' }}>
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Interactive Modal to Include/Exclude Task Team Members */}

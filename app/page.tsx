@@ -462,6 +462,25 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [currentUser?.id, statusFilter, deptFilter, priorityFilter, searchQuery]);
 
+  // Deep-link support: open task drawer automatically when arriving via /?taskId=123
+  useEffect(() => {
+    if (typeof window === 'undefined' || tasks.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const taskIdParam = params.get('taskId');
+    if (!taskIdParam) return;
+    const targetId = Number(taskIdParam);
+    if (!targetId || isNaN(targetId)) return;
+    const matched = tasks.find((t) => t.id === targetId);
+    if (matched) {
+      setActiveTab('tasks');
+      setIsUpdateTaskOpen(false);
+      setSelectedTask(matched);
+      params.delete('taskId');
+      const nextUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+      window.history.replaceState({}, '', nextUrl);
+    }
+  }, [tasks]);
+
   const fetchDeanSlots = async () => {
     try {
       const res = await fetch('/api/dean/availability');

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ToastContainer } from '@/components/ui/ToastContainer';
 
 export const metadata: Metadata = {
   title: "MSA University — Faculty of Biotechnology | Dean Executive Dashboard",
@@ -48,6 +49,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         {children}
+        <ToastContainer />
       </body>
     </html>
   );
