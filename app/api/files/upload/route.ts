@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
+import { put } from '@vercel/blob';
 import { getCurrentUser } from '@/lib/auth';
 
 const UPLOADS_DIR = path.join(process.cwd(), '.local', 'uploads');
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 5. Cloudflare R2 vs Local Dev Storage
+    // 5. Cloudflare R2 vs Vercel Blob vs Local Dev Storage
     const r2 = getR2Bucket();
     if (r2) {
       await r2.put(storedFilename, buffer, {
@@ -124,6 +125,12 @@ export async function POST(req: Request) {
           uploadedByName: user.full_name,
         },
       });
+    } else if (process.env.BLOB_READ_WRITE_TOKEN) {
+      await put(storedFilename, buffer, {
+        access: 'public',
+        contentType: file.type || 'application/octet-stream',
+        addRandomSuffix: false,
+      });
     } else {
       // Local development disk storage fallback with graceful error handling
       try {
@@ -133,7 +140,7 @@ export async function POST(req: Request) {
       } catch (fsErr: any) {
         console.error('Storage backend error:', fsErr);
         return NextResponse.json(
-          { error: 'Storage backend unavailable. Cloudflare R2 bucket binding required in production environments.' },
+          { error: 'Cloud storage not configured. Please connect free Vercel Blob storage in your Vercel Dashboard (Storage -> Create -> Blob).' },
           { status: 503 }
         );
       }

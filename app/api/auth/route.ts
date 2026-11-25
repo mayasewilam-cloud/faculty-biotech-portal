@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { queryFirst, execute, ensureAllStaffExist } from '@/lib/db';
 import { createSession, deleteSession, getCurrentUser, getImpersonationInfo, invalidateAllUserSessions } from '@/lib/auth';
+import { INITIAL_STAFF_SEED } from '@/lib/staff_seed';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 
@@ -52,6 +53,14 @@ function validatePasswordPolicy(password: any): { valid: boolean; error?: string
 function isAdminUser(user: any): boolean {
   if (!user) return false;
   return user.role === 'admin' || user.id === 6496 || user.email === 'gehan.safwat@msa.edu.eg';
+}
+
+// Returns true if the user has already changed/set their own custom password
+function hasUserChangedPassword(userRecord: any): boolean {
+  if (!userRecord) return true;
+  const seedUser = INITIAL_STAFF_SEED.find((s) => s.id === Number(userRecord.id));
+  if (!seedUser) return true;
+  return Boolean(userRecord.password_hash && userRecord.password_hash !== seedUser.password_hash);
 }
 
 // GET /api/auth: Get current logged-in user
@@ -416,6 +425,18 @@ export async function POST(req: Request) {
         passwordMatches = false;
       }
 
+      // Allow default initial passwords as current_password only if user has not changed it yet
+      if (!passwordMatches && !hasUserChangedPassword(userRecord)) {
+        const cleanCurrent = current_password.trim();
+        if (
+          cleanCurrent === 'Password2026!' ||
+          cleanCurrent === 'Forall!@#123' ||
+          ((userRecord?.id === 6496 || userRecord?.role === 'dean') && cleanCurrent === 'DeanExecutive2026!')
+        ) {
+          passwordMatches = true;
+        }
+      }
+
       if (!passwordMatches) {
         return NextResponse.json({ error: 'Incorrect current password' }, { status: 401 });
       }
@@ -501,20 +522,20 @@ export async function POST(req: Request) {
       passwordValid = false;
     }
 
-    // High-availability fallback for Dean / leadership initial logins
-    if (!passwordValid && (user.id === 6496 || user.role === 'dean' || normalizedEmail === 'gehan.safwat@msa.edu.eg')) {
-      if (
-        cleanPassword === 'DeanExecutive2026!' ||
-        cleanPassword === 'Password2026!' ||
-        cleanPassword === 'Forall!@#123'
-      ) {
-        passwordValid = true;
+    // Default initial login fallback ONLY applies if the user has NOT changed their password yet.
+    // Once a user changes their password for themselves, only their personal password is accepted.
+    if (!passwordValid && !hasUserChangedPassword(user)) {
+      if (user.id === 6496 || user.role === 'dean' || normalizedEmail === 'gehan.safwat@msa.edu.eg') {
+        if (
+          cleanPassword === 'DeanExecutive2026!' ||
+          cleanPassword === 'Password2026!' ||
+          cleanPassword === 'Forall!@#123'
+        ) {
+          passwordValid = true;
+        }
       }
-    }
 
-    // High-availability fallback for faculty initial logins
-    if (!passwordValid) {
-      if (cleanPassword === 'Password2026!' || cleanPassword === 'Forall!@#123') {
+      if (!passwordValid && (cleanPassword === 'Password2026!' || cleanPassword === 'Forall!@#123')) {
         passwordValid = true;
       }
     }

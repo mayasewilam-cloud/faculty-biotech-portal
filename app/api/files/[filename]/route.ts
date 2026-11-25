@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
+import { list } from '@vercel/blob';
 import { getCurrentUser } from '@/lib/auth';
 import { queryFirst } from '@/lib/db';
 
@@ -119,6 +120,32 @@ export async function GET(
         }
       } catch (r2Err) {
         console.warn('R2 get error, falling back to disk:', r2Err);
+      }
+    }
+
+    // 3b. Try Vercel Blob object storage if configured
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const { blobs } = await list({ prefix: safeFilename, limit: 5 });
+        const matched = blobs.find((b) => b.pathname === safeFilename) || blobs[0];
+        if (matched) {
+          const blobRes = await fetch(matched.url);
+          if (blobRes.ok) {
+            const ext = path.extname(safeFilename).toLowerCase();
+            const contentType = blobRes.headers.get('content-type') || MIME_MAP[ext] || 'application/octet-stream';
+            const originalName = safeFilename.replace(/^\d+-/, '');
+
+            const headers = new Headers();
+            headers.set('Content-Type', contentType);
+            headers.set('Content-Length', matched.size.toString());
+            headers.set('Content-Disposition', `inline; filename="${encodeURIComponent(originalName)}"`);
+            headers.set('Cache-Control', 'private, max-age=3600');
+
+            return new Response(blobRes.body, { status: 200, headers });
+          }
+        }
+      } catch (blobErr) {
+        console.warn('Vercel Blob get error, falling back:', blobErr);
       }
     }
 

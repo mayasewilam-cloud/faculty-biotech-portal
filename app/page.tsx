@@ -104,6 +104,7 @@ export default function DashboardPage() {
 
   // Change Password Modal States
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [changePasswordCurrent, setChangePasswordCurrent] = useState('');
   const [changePasswordNew, setChangePasswordNew] = useState('');
   const [changePasswordConfirm, setChangePasswordConfirm] = useState('');
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
@@ -115,12 +116,16 @@ export default function DashboardPage() {
     setChangePasswordError('');
     setChangePasswordSuccess('');
 
+    if (!changePasswordCurrent) {
+      setChangePasswordError('Please enter your current password.');
+      return;
+    }
     if (changePasswordNew !== changePasswordConfirm) {
       setChangePasswordError('Passwords do not match.');
       return;
     }
-    if (changePasswordNew.length < 6) {
-      setChangePasswordError('Password must be at least 6 characters.');
+    if (changePasswordNew.length < 8) {
+      setChangePasswordError('Password must be at least 8 characters.');
       return;
     }
 
@@ -131,18 +136,21 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'change_password',
+          current_password: changePasswordCurrent,
           new_password: changePasswordNew,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update password');
-      setChangePasswordSuccess('Password updated successfully!');
+      setChangePasswordSuccess('Password updated successfully! Please sign in with your new password.');
       setTimeout(() => {
         setIsChangePasswordOpen(false);
+        setChangePasswordCurrent('');
         setChangePasswordNew('');
         setChangePasswordConfirm('');
         setChangePasswordSuccess('');
-      }, 1200);
+        router.push('/login');
+      }, 1400);
     } catch (err: any) {
       setChangePasswordError(err.message);
     } finally {
@@ -3098,13 +3106,28 @@ export default function DashboardPage() {
             <form onSubmit={handleChangePasswordSubmit}>
               <div style={{ marginBottom: '14px' }}>
                 <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px' }}>
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  className="form-input"
+                  style={{ width: '100%' }}
+                  placeholder="Enter your current password"
+                  value={changePasswordCurrent}
+                  onChange={(e) => setChangePasswordCurrent(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px' }}>
                   New Password
                 </label>
                 <input
                   type="password"
                   className="form-input"
                   style={{ width: '100%' }}
-                  placeholder="Minimum 6 characters"
+                  placeholder="Minimum 8 characters"
                   value={changePasswordNew}
                   onChange={(e) => setChangePasswordNew(e.target.value)}
                   required
