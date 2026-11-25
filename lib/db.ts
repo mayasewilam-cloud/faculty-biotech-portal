@@ -4,6 +4,7 @@ import { loadStateFromDisk, saveStateToDisk } from './storage';
 import { Meeting, MeetingActionItem, FacultyCommittee, DeanAvailabilitySlot } from '@/types';
 import { OFFICIAL_FACULTY_COMMITTEES } from './committees_seed';
 import { FALL_2026_TASKS } from './fall_2026_seed_tasks';
+import { isPgConfigured, ensurePgSchemaAndSeed, pgQueryAll, pgQueryFirst, pgExecute } from './neon_pg';
 
 function getD1(): any {
   // 1. Try OpenNext getCloudflareContext (Official Next.js 15/16 adapter API)
@@ -446,6 +447,17 @@ if (!g.__memoryPasswordResetTokens) g.__memoryPasswordResetTokens = [];
 async function ensureInitialized(): Promise<void> {
   const db = getD1();
   if (db) return;
+  if (isPgConfigured()) {
+    await ensurePgSchemaAndSeed({
+      staff: INITIAL_STAFF_SEED,
+      hats: DEFAULT_HATS_SEED,
+      hatMembers: DEFAULT_HAT_MEMBERS_SEED,
+      committees: OFFICIAL_FACULTY_COMMITTEES,
+      tasks: DEFAULT_TASKS_SEED,
+      logs: DEFAULT_LOGS_SEED,
+    });
+    return;
+  }
   if (g.__isInitialized) return;
   g.__isInitialized = true;
   try {
@@ -550,6 +562,9 @@ export async function queryAll<T = any>(sql: string, params: any[] = []): Promis
   }
 
   await ensureInitialized();
+  if (!db && isPgConfigured()) {
+    return await pgQueryAll<T>(sql, params);
+  }
   const normalizedSql = sql.toLowerCase();
   const allStaff = getAllStaff();
   const allTasks: any[] = g.__memoryTasks || [];
@@ -696,6 +711,9 @@ export async function queryFirst<T = any>(sql: string, params: any[] = []): Prom
   }
 
   await ensureInitialized();
+  if (!db && isPgConfigured()) {
+    return await pgQueryFirst<T>(sql, params);
+  }
   const normalizedSql = sql.toLowerCase();
   const allStaff = getAllStaff();
   const allTasks: any[] = g.__memoryTasks || [];
@@ -838,6 +856,9 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
   }
 
   await ensureInitialized();
+  if (!db && isPgConfigured()) {
+    return await pgExecute(sql, params);
+  }
   const normalizedSql = sql.toLowerCase();
 
   // Sessions
@@ -1503,6 +1524,7 @@ export async function removeMemberFromHat(hatId: number, userId: number): Promis
 // Automatically ensure all official MSA Faculty of Biotechnology personnel are in D1 SQL Database
 export async function ensureAllStaffExist(): Promise<void> {
   await ensureInitialized();
+  if (isPgConfigured()) return;
   const db = getD1();
   if (!db) {
     if (!g.__memoryUsers || g.__memoryUsers.length === 0) {
@@ -1656,6 +1678,16 @@ export async function ensureSuperAdminExists(): Promise<void> {
 // ─────────────────────────────────────────────────────────────
 export async function getAllMeetings(): Promise<Meeting[]> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    const rows = await pgQueryAll('SELECT * FROM meetings ORDER BY date DESC, id DESC');
+    return rows.map((r: any) => ({
+      ...r,
+      attendees: typeof r.attendees === 'string' ? JSON.parse(r.attendees) : (r.attendees || []),
+      agenda: typeof r.agenda === 'string' ? JSON.parse(r.agenda) : (r.agenda || []),
+      decisions: typeof r.decisions === 'string' ? JSON.parse(r.decisions) : (r.decisions || []),
+      action_items: typeof r.action_items === 'string' ? JSON.parse(r.action_items) : (r.action_items || []),
+    }));
+  }
   const db = getD1();
   if (db) {
     try {
@@ -1682,6 +1714,38 @@ export async function getMeetingById(id: number): Promise<Meeting | null> {
 
 export async function createMeeting(data: Partial<Meeting> & { title: string; created_by_id: number; created_by_name: string }): Promise<Meeting> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    const now = new Date().toISOString();
+    const res = await pgExecute(
+      `INSERT INTO meetings (
+        title, type, hat_id, hat_name, date, location, chair,
+        rapporteur, objective, attendees, agenda, minutes_body,
+        decisions, action_items, status, created_at, created_by_id, created_by_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.title,
+        data.type || 'departmental',
+        data.hat_id || null,
+        data.hat_name || null,
+        data.date || now,
+        data.location || "Dean's Office (Building A, Room 301)",
+        data.chair || data.created_by_name,
+        data.rapporteur || '',
+        data.objective || '',
+        JSON.stringify(data.attendees || []),
+        JSON.stringify(data.agenda || []),
+        data.minutes_body || '',
+        JSON.stringify(data.decisions || []),
+        JSON.stringify(data.action_items || []),
+        data.status || 'approved',
+        now,
+        data.created_by_id,
+        data.created_by_name,
+      ]
+    );
+    const created = await getMeetingById(res.lastInsertRowid);
+    if (created) return created;
+  }
   const meetings: Meeting[] = g.__memoryMeetings || [];
   const newId = meetings.length > 0 ? Math.max(...meetings.map(m => m.id)) + 1 : 1;
 
@@ -1757,6 +1821,38 @@ export async function createMeeting(data: Partial<Meeting> & { title: string; cr
 
 export async function updateMeeting(id: number, data: Partial<Meeting>): Promise<Meeting | null> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    const existing = await getMeetingById(id);
+    if (!existing) return null;
+    const updated: Meeting = { ...existing, ...data, id };
+    await pgExecute(
+      `UPDATE meetings SET
+        title = ?, type = ?, hat_id = ?, hat_name = ?, date = ?,
+        location = ?, chair = ?, rapporteur = ?, objective = ?,
+        attendees = ?, agenda = ?, minutes_body = ?, decisions = ?,
+        action_items = ?, status = ?
+      WHERE id = ?`,
+      [
+        updated.title,
+        updated.type,
+        updated.hat_id ?? null,
+        updated.hat_name ?? null,
+        updated.date,
+        updated.location,
+        updated.chair,
+        updated.rapporteur ?? '',
+        updated.objective ?? '',
+        JSON.stringify(updated.attendees || []),
+        JSON.stringify(updated.agenda || []),
+        updated.minutes_body ?? '',
+        JSON.stringify(updated.decisions || []),
+        JSON.stringify(updated.action_items || []),
+        updated.status,
+        id,
+      ]
+    );
+    return updated;
+  }
   const meetings: Meeting[] = g.__memoryMeetings || [];
   const idx = meetings.findIndex(m => m.id === id);
   if (idx === -1) return null;
@@ -1806,6 +1902,10 @@ export async function updateMeeting(id: number, data: Partial<Meeting>): Promise
 
 export async function deleteMeeting(id: number): Promise<boolean> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    await pgExecute('DELETE FROM meetings WHERE id = ?', [id]);
+    return true;
+  }
   const meetings: Meeting[] = g.__memoryMeetings || [];
   g.__memoryMeetings = meetings.filter(m => m.id !== id);
   await persistCurrentState();
@@ -1945,9 +2045,23 @@ export async function convertMeetingActionItemToTask(
 // ─────────────────────────────────────────────────────────────
 export async function savePushSubscription(userId: number, subscription: any): Promise<void> {
   await ensureInitialized();
-  const subs: any[] = g.__memorySubscriptions || [];
   const endpoint = subscription?.endpoint;
   if (!endpoint) return;
+  if (isPgConfigured()) {
+    await pgExecute(
+      `INSERT OR REPLACE INTO push_subscriptions (user_id, endpoint, p256dh, auth, keys, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        userId,
+        endpoint,
+        subscription.keys?.p256dh || '',
+        subscription.keys?.auth || '',
+        JSON.stringify(subscription.keys || {}),
+      ]
+    );
+    return;
+  }
+  const subs: any[] = g.__memorySubscriptions || [];
 
   const existingIdx = subs.findIndex(s => s.endpoint === endpoint);
   const entry = {
@@ -1985,6 +2099,17 @@ export async function savePushSubscription(userId: number, subscription: any): P
 
 export async function getPushSubscriptions(userId?: number): Promise<any[]> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    const rows = userId
+      ? await pgQueryAll('SELECT * FROM push_subscriptions WHERE user_id = ?', [userId])
+      : await pgQueryAll('SELECT * FROM push_subscriptions');
+    return rows.map((r: any) => ({
+      userId: r.user_id,
+      endpoint: r.endpoint,
+      keys: typeof r.keys === 'string' ? JSON.parse(r.keys) : { p256dh: r.p256dh, auth: r.auth },
+      updatedAt: r.updated_at,
+    }));
+  }
   const db = getD1();
   if (db) {
     try {
@@ -2013,6 +2138,10 @@ export async function getPushSubscriptions(userId?: number): Promise<any[]> {
 
 export async function removePushSubscription(endpoint: string): Promise<void> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    await pgExecute('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
+    return;
+  }
   const subs: any[] = g.__memorySubscriptions || [];
   g.__memorySubscriptions = subs.filter(s => s.endpoint !== endpoint);
   await persistCurrentState();
@@ -2030,6 +2159,16 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
 // ─────────────────────────────────────────────────────────────
 export async function getAllCommittees(): Promise<FacultyCommittee[]> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    const rows = await pgQueryAll('SELECT * FROM committees ORDER BY id ASC');
+    if (rows.length > 0) {
+      return rows.map((r: any) => ({
+        ...r,
+        mandates: typeof r.mandates === 'string' ? JSON.parse(r.mandates) : r.mandates || [],
+        members: typeof r.members === 'string' ? JSON.parse(r.members) : r.members || [],
+      })) as FacultyCommittee[];
+    }
+  }
   const db = getD1();
   if (db) {
     try {
@@ -2050,6 +2189,17 @@ export async function getAllCommittees(): Promise<FacultyCommittee[]> {
 
 export async function getCommitteeById(id: number): Promise<FacultyCommittee | null> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    const res = await pgQueryFirst('SELECT * FROM committees WHERE id = ?', [id]);
+    if (res) {
+      return {
+        ...res,
+        mandates: typeof res.mandates === 'string' ? JSON.parse(res.mandates) : res.mandates || [],
+        members: typeof res.members === 'string' ? JSON.parse(res.members) : res.members || [],
+      } as FacultyCommittee;
+    }
+    return null;
+  }
   const db = getD1();
   if (db) {
     try {
@@ -2069,6 +2219,37 @@ export async function getCommitteeById(id: number): Promise<FacultyCommittee | n
 
 export async function createCommittee(data: Omit<FacultyCommittee, 'id'>): Promise<FacultyCommittee> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    const res = await pgExecute(
+      `INSERT INTO committees (
+        code, name, name_ar, category, decree_ref, chair_id, chair_name,
+        chair_title, rapporteur_id, rapporteur_name, rapporteur_title, description,
+        mandates, pillar_code, pillar_name, icon, color, members
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.code,
+        data.name,
+        data.name_ar || null,
+        data.category || 'standing',
+        data.decree_ref || null,
+        data.chair_id,
+        data.chair_name,
+        data.chair_title || null,
+        data.rapporteur_id,
+        data.rapporteur_name,
+        data.rapporteur_title || null,
+        data.description || null,
+        JSON.stringify(data.mandates || []),
+        data.pillar_code || null,
+        data.pillar_name || null,
+        data.icon || '🏛️',
+        data.color || '#3b82f6',
+        JSON.stringify(data.members || []),
+      ]
+    );
+    const created = await getCommitteeById(res.lastInsertRowid);
+    if (created) return created;
+  }
   const comms: FacultyCommittee[] = g.__memoryCommittees || OFFICIAL_FACULTY_COMMITTEES;
   const newId = comms.length > 0 ? Math.max(...comms.map(c => c.id)) + 1 : 1;
   const newComm: FacultyCommittee = {
@@ -2121,6 +2302,40 @@ export async function createCommittee(data: Omit<FacultyCommittee, 'id'>): Promi
 
 export async function updateCommittee(id: number, data: Partial<FacultyCommittee>): Promise<FacultyCommittee | null> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    const existing = await getCommitteeById(id);
+    if (!existing) return null;
+    const updated = { ...existing, ...data };
+    await pgExecute(
+      `UPDATE committees SET
+        name = ?, name_ar = ?, category = ?, decree_ref = ?, chair_id = ?, chair_name = ?,
+        chair_title = ?, rapporteur_id = ?, rapporteur_name = ?, rapporteur_title = ?,
+        description = ?, mandates = ?, pillar_code = ?, pillar_name = ?, icon = ?,
+        color = ?, members = ?
+      WHERE id = ?`,
+      [
+        updated.name,
+        updated.name_ar || null,
+        updated.category,
+        updated.decree_ref || null,
+        updated.chair_id,
+        updated.chair_name,
+        updated.chair_title || null,
+        updated.rapporteur_id,
+        updated.rapporteur_name,
+        updated.rapporteur_title || null,
+        updated.description || null,
+        JSON.stringify(updated.mandates || []),
+        updated.pillar_code || null,
+        updated.pillar_name || null,
+        updated.icon,
+        updated.color,
+        JSON.stringify(updated.members || []),
+        id,
+      ]
+    );
+    return updated;
+  }
   const comms: FacultyCommittee[] = g.__memoryCommittees || OFFICIAL_FACULTY_COMMITTEES;
   const idx = comms.findIndex(c => c.id === id);
   if (idx === -1) return null;
@@ -2166,6 +2381,10 @@ export async function updateCommittee(id: number, data: Partial<FacultyCommittee
 
 export async function deleteCommittee(id: number): Promise<boolean> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    await pgExecute('DELETE FROM committees WHERE id = ?', [id]);
+    return true;
+  }
   const comms: FacultyCommittee[] = g.__memoryCommittees || OFFICIAL_FACULTY_COMMITTEES;
   const filtered = comms.filter(c => c.id !== id);
   if (filtered.length === comms.length) return false;

@@ -20,6 +20,7 @@
   "type": "module",
   "dependencies": {
     "@googleapis/sheets": "^18.1.2",
+    "@neondatabase/serverless": "^1.2.1",
     "@types/nodemailer": "^8.0.2",
     "@vercel/blob": "^2.9.0",
     "bcryptjs": "^3.0.3",
