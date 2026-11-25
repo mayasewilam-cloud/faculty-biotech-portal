@@ -417,13 +417,6 @@ export default function DashboardPage() {
         setAllUsers(usersData.users || []);
       }
 
-      // 2.5 Automatically synchronize live tasks from Google Sheet on portal open
-      try {
-        await fetch('/api/tasks/sync-sheet');
-      } catch (sheetSyncErr) {
-        console.warn('Background Google Sheet sync on open:', sheetSyncErr);
-      }
-
       // 3. Fetch tasks, hats, committees, meetings, and dean availability slots
       await Promise.all([
         fetchTasks(),
@@ -457,6 +450,17 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  // Lightweight background auto-refresh every 30s so staff see new tasks without refreshing
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchTasks();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [currentUser?.id, statusFilter, deptFilter, priorityFilter, searchQuery]);
 
   const fetchDeanSlots = async () => {
     try {

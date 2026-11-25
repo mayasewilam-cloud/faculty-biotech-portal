@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { sendEmail, isSmtpConfigured, verifySmtpConnection } from './email';
 import { loadStateFromDisk, saveStateToDisk, FacultyPersistedState } from './storage';
+import { isPgConfigured, pgQueryAll, pgQueryFirst, pgExecute } from './neon_pg';
 
 export type NotificationType =
   | 'account_setup'
@@ -69,9 +70,6 @@ export async function createInAppNotification(params: {
   relatedTaskId?: number | null;
   link?: string | null;
 }): Promise<InAppNotification> {
-  const state = await loadStateFromDisk();
-  const notifications: InAppNotification[] = state?.notifications || g.__inAppNotifications || [];
-
   const newNotif: InAppNotification = {
     id: `notif_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
     user_id: Number(params.userId),
@@ -80,11 +78,37 @@ export async function createInAppNotification(params: {
     message: params.message,
     type: params.type,
     related_task_id: params.relatedTaskId ? Number(params.relatedTaskId) : null,
-    link: params.link || (params.relatedTaskId ? `/dashboard/tasks?taskId=${params.relatedTaskId}` : null),
+    link: params.link || (params.relatedTaskId ? `/?taskId=${params.relatedTaskId}` : null),
     is_read: false,
     read_at: null,
     created_at: new Date().toISOString(),
   };
+
+  if (isPgConfigured()) {
+    try {
+      await pgExecute(
+        `INSERT INTO notifications (id, user_id, user_email, title, message, type, related_task_id, link, is_read, read_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)`,
+        [
+          newNotif.id,
+          newNotif.user_id,
+          newNotif.user_email,
+          newNotif.title,
+          newNotif.message,
+          newNotif.type,
+          newNotif.related_task_id,
+          newNotif.link,
+          newNotif.created_at,
+        ]
+      );
+      return newNotif;
+    } catch (pgErr) {
+      console.warn('PG createInAppNotification fallback:', pgErr);
+    }
+  }
+
+  const state = await loadStateFromDisk();
+  const notifications: InAppNotification[] = state?.notifications || g.__inAppNotifications || [];
 
   notifications.unshift(newNotif);
   g.__inAppNotifications = notifications;
@@ -102,10 +126,43 @@ export async function getNotificationsForUser(
   userEmail?: string,
   isAdmin: boolean = false
 ): Promise<{ notifications: InAppNotification[]; unreadCount: number }> {
+  const normEmail = userEmail ? userEmail.toLowerCase().trim() : null;
+
+  if (isPgConfigured()) {
+    try {
+      const rows = normEmail
+        ? await pgQueryAll(
+            'SELECT * FROM notifications WHERE user_id = ? OR LOWER(user_email) = ? ORDER BY created_at DESC LIMIT 100',
+            [userId, normEmail]
+          )
+        : await pgQueryAll(
+            'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 100',
+            [userId]
+          );
+      const mapped: InAppNotification[] = rows.map((r: any) => ({
+        id: r.id,
+        user_id: Number(r.user_id),
+        user_email: r.user_email,
+        title: r.title,
+        message: r.message,
+        type: r.type,
+        related_task_id: r.related_task_id ? Number(r.related_task_id) : null,
+        link: r.link ? String(r.link).replace('/dashboard/tasks', '/') : null,
+        is_read: Boolean(r.is_read),
+        read_at: r.read_at || null,
+        created_at: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      }));
+      return {
+        notifications: mapped,
+        unreadCount: mapped.filter(n => !n.is_read).length,
+      };
+    } catch (pgErr) {
+      console.warn('PG getNotificationsForUser fallback:', pgErr);
+    }
+  }
+
   const state = await loadStateFromDisk();
   const allNotifs: InAppNotification[] = state?.notifications || g.__inAppNotifications || [];
-
-  const normEmail = userEmail ? userEmail.toLowerCase().trim() : null;
 
   // Strict role-based isolation:
   // Faculty users can ONLY see notifications specifically addressed to their user_id or user_email.
@@ -128,6 +185,25 @@ export async function markNotificationAsRead(
   notificationId: string,
   userId: number
 ): Promise<{ success: boolean; error?: string }> {
+  if (isPgConfigured()) {
+    try {
+      const target = await pgQueryFirst('SELECT * FROM notifications WHERE id = ?', [notificationId]);
+      if (!target) {
+        return { success: false, error: 'Notification not found' };
+      }
+      if (Number(target.user_id) !== userId && userId !== 6496 && userId !== 99) {
+        return { success: false, error: 'Unauthorized: Cannot modify notification of another user' };
+      }
+      await pgExecute('UPDATE notifications SET is_read = 1, read_at = ? WHERE id = ?', [
+        new Date().toISOString(),
+        notificationId,
+      ]);
+      return { success: true };
+    } catch (pgErr) {
+      console.warn('PG markNotificationAsRead fallback:', pgErr);
+    }
+  }
+
   const state = await loadStateFromDisk();
   const notifications: InAppNotification[] = state?.notifications || g.__inAppNotifications || [];
 
@@ -157,12 +233,30 @@ export async function markAllNotificationsAsRead(
   userId: number,
   userEmail?: string
 ): Promise<{ count: number }> {
+  const normEmail = userEmail ? userEmail.toLowerCase().trim() : null;
+  const now = new Date().toISOString();
+
+  if (isPgConfigured()) {
+    try {
+      const res = normEmail
+        ? await pgExecute(
+            'UPDATE notifications SET is_read = 1, read_at = ? WHERE (user_id = ? OR LOWER(user_email) = ?) AND is_read = 0',
+            [now, userId, normEmail]
+          )
+        : await pgExecute(
+            'UPDATE notifications SET is_read = 1, read_at = ? WHERE user_id = ? AND is_read = 0',
+            [now, userId]
+          );
+      return { count: res.changes || 0 };
+    } catch (pgErr) {
+      console.warn('PG markAllNotificationsAsRead fallback:', pgErr);
+    }
+  }
+
   const state = await loadStateFromDisk();
   const notifications: InAppNotification[] = state?.notifications || g.__inAppNotifications || [];
 
-  const normEmail = userEmail ? userEmail.toLowerCase().trim() : null;
   let count = 0;
-  const now = new Date().toISOString();
 
   for (const n of notifications) {
     if ((n.user_id === userId || (normEmail && n.user_email === normEmail)) && !n.is_read) {

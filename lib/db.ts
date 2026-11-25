@@ -1925,11 +1925,52 @@ export async function deleteMeeting(id: number): Promise<boolean> {
 // ─────────────────────────────────────────────────────────────
 export async function getDeanAvailabilitySlots(): Promise<DeanAvailabilitySlot[]> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    try {
+      const rows = await pgQueryAll('SELECT * FROM dean_availability_slots ORDER BY id ASC');
+      if (rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: r.id,
+          day_of_week: r.day_of_week,
+          start_time: r.start_time,
+          end_time: r.end_time,
+          location: r.location,
+          note: r.note || undefined,
+          is_active: Boolean(r.is_active),
+        }));
+      }
+    } catch (e) {
+      console.warn('PG getDeanAvailabilitySlots fallback:', e);
+    }
+  }
   return g.__memoryDeanSlots || DEFAULT_DEAN_SLOTS;
 }
 
 export async function saveDeanAvailabilitySlots(slots: DeanAvailabilitySlot[]): Promise<DeanAvailabilitySlot[]> {
   await ensureInitialized();
+  if (isPgConfigured()) {
+    try {
+      await pgExecute('DELETE FROM dean_availability_slots', []);
+      for (const s of slots) {
+        await pgExecute(
+          `INSERT INTO dean_availability_slots (id, day_of_week, start_time, end_time, location, note, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            s.id,
+            s.day_of_week,
+            s.start_time,
+            s.end_time,
+            s.location || "Dean's Office (Building A, Room 301)",
+            s.note || null,
+            s.is_active ? 1 : 0,
+          ]
+        );
+      }
+      return slots;
+    } catch (e) {
+      console.warn('PG saveDeanAvailabilitySlots fallback:', e);
+    }
+  }
   g.__memoryDeanSlots = slots;
   await persistCurrentState();
   return slots;

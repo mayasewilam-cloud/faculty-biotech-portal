@@ -291,6 +291,19 @@ export async function ensurePgSchemaAndSeed(seeds: {
         attempts INTEGER DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )`,
+      `CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        user_email TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type TEXT NOT NULL,
+        related_task_id INTEGER,
+        link TEXT,
+        is_read INTEGER DEFAULT 0,
+        read_at TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )`,
     ];
 
     for (const stmt of ddlStatements) {
