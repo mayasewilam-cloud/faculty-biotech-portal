@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
-import { list } from '@vercel/blob';
+import { get, list } from '@vercel/blob';
 import { getCurrentUser } from '@/lib/auth';
 import { queryFirst } from '@/lib/db';
 
@@ -123,9 +123,28 @@ export async function GET(
       }
     }
 
-    // 3b. Try Vercel Blob object storage if configured
+    // 3b. Try Vercel Blob object storage if configured (supports both Private and Public stores)
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
+        // Try Private store read first
+        try {
+          const privateResult = await get(safeFilename, { access: 'private' });
+          if (privateResult && privateResult.stream) {
+            const ext = path.extname(safeFilename).toLowerCase();
+            const contentType = privateResult.blob?.contentType || MIME_MAP[ext] || 'application/octet-stream';
+            const originalName = safeFilename.replace(/^\d+-/, '');
+
+            const headers = new Headers();
+            headers.set('Content-Type', contentType);
+            if (privateResult.blob?.size) headers.set('Content-Length', privateResult.blob.size.toString());
+            headers.set('Content-Disposition', `inline; filename="${encodeURIComponent(originalName)}"`);
+            headers.set('Cache-Control', 'private, max-age=3600');
+
+            return new Response(privateResult.stream, { status: 200, headers });
+          }
+        } catch {}
+
+        // Fallback to Public store list + fetch
         const { blobs } = await list({ prefix: safeFilename, limit: 5 });
         const matched = blobs.find((b) => b.pathname === safeFilename) || blobs[0];
         if (matched) {

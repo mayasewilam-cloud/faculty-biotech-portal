@@ -126,11 +126,20 @@ export async function POST(req: Request) {
         },
       });
     } else if (process.env.BLOB_READ_WRITE_TOKEN) {
-      await put(storedFilename, buffer, {
-        access: 'public',
-        contentType: file.type || 'application/octet-stream',
-        addRandomSuffix: false,
-      });
+      try {
+        await put(storedFilename, buffer, {
+          access: 'private',
+          contentType: file.type || 'application/octet-stream',
+          addRandomSuffix: false,
+        });
+      } catch (privateErr: any) {
+        // Fallback to public if the user created a Public Blob store
+        await put(storedFilename, buffer, {
+          access: 'public',
+          contentType: file.type || 'application/octet-stream',
+          addRandomSuffix: false,
+        });
+      }
     } else {
       // Local development disk storage fallback with graceful error handling
       try {
