@@ -287,6 +287,7 @@ export default function DashboardPage() {
   const [updateUrl, setUpdateUrl] = useState('');
   const [updateDriveLink, setUpdateDriveLink] = useState('');
   const [updateActionPlan, setUpdateActionPlan] = useState('');
+  const [updateDeadline, setUpdateDeadline] = useState('');
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
 
   // Task Dispatch Form State (Supports Single, Hat Group, Multi-Selected, Department-wide, or Broadcast)
@@ -1490,6 +1491,7 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             status: updateStatus,
+            deadline: updateDeadline ? new Date(updateDeadline).toISOString() : undefined,
             completion_notes: updateNotes,
             completion_url: updateUrl,
             drive_link: updateDriveLink || null,
@@ -2351,6 +2353,7 @@ export default function DashboardPage() {
               setUpdateUrl(task.attachment_url || '');
               setUpdateDriveLink(task.drive_link || '');
               setUpdateActionPlan(task.action_plan || '');
+              setUpdateDeadline(task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : '');
               setIsUpdateTaskOpen(true);
             }}
             onRequestDeanMeeting={handleTaskMeetingAction}
@@ -2585,6 +2588,7 @@ export default function DashboardPage() {
                 setUpdateStatus((task.status as any) || 'in_progress');
                 setUpdateNotes(task.completion_notes || '');
                 setUpdateUrl(task.completion_url || '');
+                setUpdateDeadline(task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : '');
                 setIsUpdateTaskOpen(true);
               } else {
                 setSelectedTask(task);
@@ -2801,6 +2805,26 @@ export default function DashboardPage() {
           setDriveLink={setUpdateDriveLink}
           actionPlan={updateActionPlan}
           setActionPlan={setUpdateActionPlan}
+          updateDeadline={updateDeadline}
+          setUpdateDeadline={setUpdateDeadline}
+          onLeaveTask={async (t) => {
+            if (!confirm(`Remove yourself from "${t.title}"?`)) return;
+            try {
+              const res = await fetch(`/api/tasks/${t.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'leave_task' }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Failed to leave task');
+              setIsUpdateTaskOpen(false);
+              setSelectedTask(null);
+              alert('You removed yourself from this task.');
+              fetchTasks();
+            } catch (err: any) {
+              alert(err.message || 'Failed to leave task');
+            }
+          }}
           onRequestDeanMeeting={() => {
             if (selectedTask) {
               setIsUpdateTaskOpen(false);

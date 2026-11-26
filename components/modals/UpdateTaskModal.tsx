@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Task } from '@/types';
-import { Paperclip, FileText, Download, CheckCircle2, Clock, RotateCcw, Send, AlertTriangle, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Paperclip, FileText, Download, CheckCircle2, Clock, RotateCcw, Send, AlertTriangle, ExternalLink, ShieldCheck, Calendar, UserMinus } from 'lucide-react';
 import { FileUploadZone } from '@/components/common/FileUploadZone';
 
 interface UpdateTaskModalProps {
@@ -20,6 +20,9 @@ interface UpdateTaskModalProps {
   setDriveLink?: (link: string) => void;
   actionPlan?: string;
   setActionPlan?: (plan: string) => void;
+  updateDeadline?: string;
+  setUpdateDeadline?: (deadline: string) => void;
+  onLeaveTask?: (task: Task) => void;
   onRequestDeanMeeting?: (task: Task) => void;
   isSubmittingUpdate: boolean;
   formatFileSize: (bytes: number | null | undefined) => string;
@@ -41,6 +44,9 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
   setDriveLink,
   actionPlan,
   setActionPlan,
+  updateDeadline,
+  setUpdateDeadline,
+  onLeaveTask,
   onRequestDeanMeeting,
   isSubmittingUpdate,
   formatFileSize,
@@ -226,6 +232,23 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
 
         {/* Submission Form */}
         <form onSubmit={onSubmit}>
+          {/* Editable Due Date for Members */}
+          {setUpdateDeadline && (
+            <div className="form-group" style={{ marginBottom: '18px' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Calendar size={14} color="var(--accent-blue)" />
+                <span>Task Due Date</span>
+              </label>
+              <input
+                type="date"
+                className="form-input"
+                value={updateDeadline || ''}
+                onChange={(e) => setUpdateDeadline(e.target.value)}
+                style={{ width: '100%', maxWidth: '240px' }}
+              />
+            </div>
+          )}
+
           {/* Status Radio Buttons */}
           <div className="form-group">
             <label className="form-label">Task Status *</label>
@@ -427,7 +450,28 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
             </div>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginTop: '24px' }}>
+            <div>
+              {onLeaveTask && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => onLeaveTask(task)}
+                  style={{
+                    color: '#f59e0b',
+                    borderColor: 'rgba(245, 158, 11, 0.35)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <UserMinus size={15} />
+                  <span>Remove Myself from Task</span>
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               type="button"
               className="btn btn-secondary"
@@ -443,6 +487,7 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
               <Send size={16} />
               <span>{isSubmittingUpdate ? 'Submitting...' : 'Submit Update to Dean Office'}</span>
             </button>
+            </div>
           </div>
         </form>
       </div>

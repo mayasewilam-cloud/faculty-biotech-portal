@@ -1,6 +1,7 @@
-import { parseAssignedMembers } from '@/lib/taskFilters';
+import { parseAssignedMembers, isUserAssignedToTask } from '@/lib/taskFilters';
+import { isNameMatchingStaff, resolveStaffMember } from '@/lib/staff_matcher';
 import { NextResponse } from 'next/server';
-import { queryFirst, execute } from '@/lib/db';
+import { queryAll, queryFirst, execute } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { renderRevisionRequestTemplate, renderDeanApprovalTemplate } from '@/lib/email';
 import { createInAppNotification, enqueueNotificationEmail, processNotificationQueue } from '@/lib/notifications';
@@ -29,7 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const body = await req.json();
     const isDeanOrAdmin = user.role === 'admin' || user.id === 99 || user.id === 6496 || user.id === 6591 || user.role === 'dean' || user.role === 'vice_dean' || user.role === 'dept_head';
-    const isAssignee = existingTask.assigned_to_id === user.id;
+    const isAssignee = existingTask.assigned_to_id === user.id || isUserAssignedToTask(existingTask, user);
     const isCreator = existingTask.assigned_by_id === user.id;
     const isTaskOwner = existingTask.task_owner_id === user.id;
 
@@ -37,20 +38,92 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'You do not have permission to modify this task' }, { status: 403 });
     }
 
-    // Assignee updates status, notes, or uploads deliverable file
-    if (isAssignee && !isDeanOrAdmin && !isCreator && !isTaskOwner) {
-      const { status, completion_notes, completion_url, drive_link, action_plan, attachment_name, attachment_type, attachment_size, attachment_url } = body;
+    // ── Member Self-Removal ("Leave Task") ──
+    if (body.action === 'leave_task' || body.remove_self === true) {
+      const currentMembers = parseAssignedMembers(existingTask.assigned_members);
+      const remainingMembers = currentMembers.filter(
+        (m: string) => !isNameMatchingStaff(m, user)
+      );
+      const serializedRemaining = JSON.stringify(remainingMembers);
 
-      if (!status) {
-        return NextResponse.json({ error: 'Status is required' }, { status: 400 });
+      if (existingTask.group_id) {
+        const siblings = await queryAll('SELECT id, assigned_to_id FROM tasks WHERE group_id = ?', [existingTask.group_id]);
+        await execute('UPDATE tasks SET assigned_members = ?, updated_at = CURRENT_TIMESTAMP WHERE group_id = ?', [
+          serializedRemaining,
+          existingTask.group_id,
+        ]);
+
+        if (existingTask.assigned_to_id === user.id) {
+          if (siblings.length > 1) {
+            await execute('DELETE FROM tasks WHERE id = ?', [taskId]);
+          } else {
+            const nextName = remainingMembers[0];
+            const allUsers = nextName ? await queryAll('SELECT id, full_name, email FROM users') : [];
+            const nextStaff = nextName ? resolveStaffMember(nextName, allUsers) : null;
+            const fallbackId = nextStaff?.id || existingTask.task_owner_id || existingTask.assigned_by_id || 6496;
+            await execute(
+              'UPDATE tasks SET assigned_to_id = ?, assigned_members = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+              [fallbackId, serializedRemaining, taskId]
+            );
+          }
+        }
+      } else {
+        if (existingTask.assigned_to_id === user.id) {
+          const nextName = remainingMembers[0];
+          const allUsers = nextName ? await queryAll('SELECT id, full_name, email FROM users') : [];
+          const nextStaff = nextName ? resolveStaffMember(nextName, allUsers) : null;
+          const fallbackId = nextStaff?.id || existingTask.task_owner_id || existingTask.assigned_by_id || 6496;
+          await execute(
+            'UPDATE tasks SET assigned_to_id = ?, assigned_members = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [fallbackId, serializedRemaining, taskId]
+          );
+        } else {
+          await execute(
+            'UPDATE tasks SET assigned_members = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [serializedRemaining, taskId]
+          );
+        }
       }
 
-      const completedAt = status === 'done' ? new Date().toISOString() : null;
+      await execute(
+        `INSERT INTO activity_logs (user_id, user_name, user_role, action_type, task_id, title, details, metadata, ip_address)
+         VALUES (?, ?, ?, 'MEMBER_LEFT_TASK', ?, ?, ?, ?, '127.0.0.1')`,
+        [
+          user.id,
+          user.full_name,
+          user.role,
+          taskId,
+          `${user.title || ''} ${user.full_name} removed themselves from task`,
+          `Member stepped off task "${existingTask.title}". Remaining members: ${remainingMembers.length > 0 ? remainingMembers.join(', ') : 'None (returned to owner/creator)'}.`,
+          JSON.stringify({ removedUserId: user.id, remainingMembers }),
+        ]
+      );
+
+      return NextResponse.json({
+        success: true,
+        removedSelf: true,
+        remainingMembers,
+        message: 'You have removed yourself from this task.',
+      });
+    }
+
+    // Assignee updates status, deadline, notes, or uploads deliverable file
+    if (isAssignee && !isDeanOrAdmin && !isCreator && !isTaskOwner) {
+      const { status, deadline, due_time, completion_notes, completion_url, drive_link, action_plan, attachment_name, attachment_type, attachment_size, attachment_url } = body;
+
+      if (!status && !deadline && due_time === undefined) {
+        return NextResponse.json({ error: 'Status or due date update is required' }, { status: 400 });
+      }
+
+      const nextStatus = status || existingTask.status;
+      const completedAt = nextStatus === 'done' ? (existingTask.completed_at || new Date().toISOString()) : null;
 
       await execute(`
         UPDATE tasks
         SET 
-          status = ?,
+          status = COALESCE(?, status),
+          deadline = COALESCE(?, deadline),
+          due_time = COALESCE(?, due_time),
           completion_notes = COALESCE(?, completion_notes),
           completion_url = COALESCE(?, completion_url),
           drive_link = COALESCE(?, drive_link),
@@ -63,7 +136,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [
-        status, 
+        status || null,
+        deadline || null,
+        due_time !== undefined ? due_time : null,
         completion_notes || null, 
         completion_url || null, 
         drive_link || null,
@@ -77,14 +152,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ]);
 
       // Audit Log Entry
-      const actionType = status === 'done' ? 'TASK_COMPLETED' : 'TASK_STATUS_UPDATED';
-      const logTitle = status === 'done' 
-        ? `${user.title} ${user.full_name} marked task as DONE`
-        : `${user.title} ${user.full_name} updated status to ${status.replace('_', ' ').toUpperCase()}`;
+      const deadlineChanged = Boolean(deadline && deadline !== existingTask.deadline);
+      const actionType = deadlineChanged && !status ? 'DEADLINE_UPDATED' : (nextStatus === 'done' ? 'TASK_COMPLETED' : 'TASK_STATUS_UPDATED');
+      const logTitle = deadlineChanged && !status
+        ? `${user.title} ${user.full_name} updated task due date`
+        : nextStatus === 'done' 
+          ? `${user.title} ${user.full_name} marked task as DONE`
+          : `${user.title} ${user.full_name} updated status to ${nextStatus.replace('_', ' ').toUpperCase()}`;
 
-      const logDetails = completion_notes 
-        ? `Work Description / Note: "${completion_notes}"`
-        : `Status transitioned from ${existingTask.status} to ${status}`;
+      const logDetails = deadlineChanged
+        ? `Due date updated to ${new Date(deadline).toLocaleDateString()}${completion_notes ? ` | Note: "${completion_notes}"` : ''}`
+        : completion_notes 
+          ? `Work Description / Note: "${completion_notes}"`
+          : `Status transitioned from ${existingTask.status} to ${nextStatus}`;
 
       await execute(`
         INSERT INTO activity_logs (user_id, user_name, user_role, action_type, task_id, title, details, metadata, ip_address)

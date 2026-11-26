@@ -29,7 +29,8 @@ import {
   Building2,
   FolderOpen,
   RefreshCw,
-  Trash2
+  Trash2,
+  UserMinus
 } from 'lucide-react';
 
 interface TasksTableViewProps {
@@ -147,6 +148,23 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleQuickLeaveTask = async (taskId: number, title: string) => {
+    if (!confirm(`Remove yourself from "${title}"?`)) return;
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'leave_task' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to leave task');
+      alert('You removed yourself from this task.');
+      if (onRefreshTasks) onRefreshTasks();
+    } catch (err: any) {
+      alert(err.message || 'Failed to leave task');
     }
   };
 
@@ -1454,6 +1472,30 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                             >
                               <CheckCircle2 size={12} />
                               <span>Done</span>
+                            </button>
+                          )}
+
+                          {/* Leave Task (Member removes themselves) */}
+                          {(currentUser?.id === task.assigned_to_id || isUserAssignedToTask(task, currentUser)) && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => handleQuickLeaveTask(task.id, task.title)}
+                              style={{
+                                padding: '4px 7px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                borderColor: 'rgba(245, 158, 11, 0.3)',
+                                color: '#f59e0b',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                              }}
+                              title="Remove yourself from this task"
+                            >
+                              <UserMinus size={12} />
+                              <span>Leave</span>
                             </button>
                           )}
 
