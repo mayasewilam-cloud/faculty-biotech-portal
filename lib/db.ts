@@ -1025,6 +1025,7 @@ export async function execute(sql: string, params: any[] = []): Promise<{ lastIn
             else if (col === 'email' && val) user.email = String(val).toLowerCase().trim();
             else if (col === 'status' && val) (user as any).status = String(val);
             else if (col === 'password_hash' && val) user.password_hash = String(val);
+            else if (col === 'custom_password_set') (user as any).custom_password_set = Number(val);
             else if (col === 'avatar' && val) user.avatar = String(val);
           }
         }

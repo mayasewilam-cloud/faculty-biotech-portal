@@ -55,12 +55,16 @@ function isAdminUser(user: any): boolean {
   return user.role === 'admin' || user.id === 6496 || user.email === 'gehan.safwat@msa.edu.eg';
 }
 
-// Returns true if the user has already changed/set their own custom password
+// Returns true ONLY if the user has explicitly set or changed their own personal password
 function hasUserChangedPassword(userRecord: any): boolean {
   if (!userRecord) return true;
-  const seedUser = INITIAL_STAFF_SEED.find((s) => s.id === Number(userRecord.id));
-  if (!seedUser) return true;
-  return Boolean(userRecord.password_hash && userRecord.password_hash !== seedUser.password_hash);
+  if (Number(userRecord.custom_password_set || 0) === 1) return true;
+  const emailLower = String(userRecord.email || '').toLowerCase().trim();
+  const seedUser = INITIAL_STAFF_SEED.find(
+    (s) => s.id === Number(userRecord.id) || s.email.toLowerCase().trim() === emailLower
+  );
+  if (!seedUser) return true; // Newly registered user
+  return false;
 }
 
 // GET /api/auth: Get current logged-in user
@@ -204,7 +208,7 @@ export async function POST(req: Request) {
       // Update password hash and invalidate sessions
       try {
         const passwordHash = await bcrypt.hash(targetPassword, 10);
-        await execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, tokenRecord.user_id]);
+        await execute('UPDATE users SET password_hash = ?, custom_password_set = 1 WHERE id = ?', [passwordHash, tokenRecord.user_id]);
         await invalidateAllUserSessions(tokenRecord.user_id);
         cookieStore.delete('faculty_session');
       } catch (err: any) {
@@ -443,7 +447,7 @@ export async function POST(req: Request) {
 
       try {
         const passwordHash = await bcrypt.hash(new_password, 10);
-        await execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, currentUser.id]);
+        await execute('UPDATE users SET password_hash = ?, custom_password_set = 1 WHERE id = ?', [passwordHash, currentUser.id]);
         await invalidateAllUserSessions(currentUser.id);
         cookieStore.delete('faculty_session');
       } catch (err: any) {

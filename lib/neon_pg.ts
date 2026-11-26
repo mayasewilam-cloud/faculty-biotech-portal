@@ -125,8 +125,10 @@ export async function ensurePgSchemaAndSeed(seeds: {
         phone TEXT,
         avatar TEXT,
         status TEXT DEFAULT 'active',
+        custom_password_set INTEGER DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_password_set INTEGER DEFAULT 0`,
       `CREATE TABLE IF NOT EXISTS tasks (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
@@ -310,30 +312,41 @@ export async function ensurePgSchemaAndSeed(seeds: {
       await client.query(stmt, []);
     }
 
-    // Seed official staff safely without ever overwriting user-changed passwords
+    // Seed official staff safely without ever overwriting user-changed passwords or crashing on email conflicts
     for (const u of seeds.staff) {
-      await client.query(
-        `INSERT INTO users (id, email, password_hash, full_name, title, role, department, phone, avatar, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active')
-         ON CONFLICT (id) DO UPDATE SET
-           email = EXCLUDED.email,
-           full_name = EXCLUDED.full_name,
-           title = EXCLUDED.title,
-           role = EXCLUDED.role,
-           department = EXCLUDED.department,
-           avatar = EXCLUDED.avatar`,
-        [
-          u.id,
-          String(u.email).toLowerCase().trim(),
-          u.password_hash,
-          u.full_name,
-          u.title,
-          u.role,
-          u.department,
-          u.phone || null,
-          u.avatar || null,
-        ]
-      );
+      const normalizedEmail = String(u.email).toLowerCase().trim();
+      try {
+        await client.query(
+          `INSERT INTO users (id, email, password_hash, full_name, title, role, department, phone, avatar, status, custom_password_set)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', 0)
+           ON CONFLICT (id) DO UPDATE SET
+             email = EXCLUDED.email,
+             full_name = EXCLUDED.full_name,
+             title = EXCLUDED.title,
+             role = EXCLUDED.role,
+             department = EXCLUDED.department,
+             avatar = EXCLUDED.avatar`,
+          [
+            u.id,
+            normalizedEmail,
+            u.password_hash,
+            u.full_name,
+            u.title,
+            u.role,
+            u.department,
+            u.phone || null,
+            u.avatar || null,
+          ]
+        );
+      } catch {
+        // If email already exists under a legacy ID, update profile fields by email without touching password_hash
+        try {
+          await client.query(
+            `UPDATE users SET full_name = $1, title = $2, role = $3, department = $4, avatar = $5 WHERE LOWER(email) = $6`,
+            [u.full_name, u.title, u.role, u.department, u.avatar || null, normalizedEmail]
+          );
+        } catch {}
+      }
     }
 
     // Seed Hats if empty
