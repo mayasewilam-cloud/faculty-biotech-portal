@@ -31,6 +31,7 @@ interface TaskInspectionDrawerProps {
   onRequestRevision?: (taskId: number, feedback: string) => Promise<void> | void;
   onOpenEmailDispatch?: (task: Task) => void;
   onRequestDeanMeeting?: (task: Task) => void;
+  onEditTask?: (task: Task) => void;
   formatFileSize: (bytes: number | null | undefined) => string;
   allTasks?: Task[];
   currentUser?: any;
@@ -45,6 +46,7 @@ export const TaskInspectionDrawer: React.FC<TaskInspectionDrawerProps> = ({
   onRequestRevision,
   onOpenEmailDispatch,
   onRequestDeanMeeting,
+  onEditTask,
   formatFileSize,
   allTasks = [],
   currentUser,
@@ -213,13 +215,28 @@ export const TaskInspectionDrawer: React.FC<TaskInspectionDrawerProps> = ({
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{task.title}</h3>
           </div>
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={onClose}
-            style={{ padding: '6px' }}
-          >
-            <X size={16} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {onEditTask && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  onClose();
+                  onEditTask(task);
+                }}
+                style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap' }}
+              >
+                Update / Edit Due Date
+              </button>
+            )}
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={onClose}
+              style={{ padding: '6px' }}
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Google Form / Live Tracker Link Banner */}

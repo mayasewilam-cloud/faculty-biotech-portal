@@ -204,6 +204,29 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
   const [sortAsc, setSortAsc] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(25);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [openRowMenuId, setOpenRowMenuId] = useState<number | null>(null);
+
+  // Compute multi-member group progress (X / Y Done)
+  const groupProgressMap = useMemo(() => {
+    const map = new Map<string, { total: number; done: number }>();
+    for (const t of tasks) {
+      if (!t.group_id) continue;
+      const cur = map.get(t.group_id) || { total: 0, done: 0 };
+      cur.total += 1;
+      if (t.status === 'done') cur.done += 1;
+      map.set(t.group_id, cur);
+    }
+    return map;
+  }, [tasks]);
+
+  const activeAdvancedFilterCount = [
+    selectedCategory !== 'all',
+    selectedPriority !== 'all',
+    selectedDept !== 'all',
+    selectedOwner !== 'all',
+    selectedAssignee !== 'all',
+  ].filter(Boolean).length;
 
   // Unique departments for filter
   const departments = useMemo(() => {
@@ -530,24 +553,90 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
         style={{
           padding: '14px 18px',
           borderRadius: '14px',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '10px',
-          alignItems: 'center'
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
         }}
       >
-        {/* Search */}
-        <div style={{ position: 'relative', gridColumn: 'span 2' }}>
-          <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-          <input
-            type="text"
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: '1 1 260px' }}>
+            <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Search tasks by title, coordinator, assignee, or TR#..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: '34px', fontSize: '0.86rem', height: '38px', width: '100%' }}
+            />
+          </div>
+
+          <select
             className="form-input"
-            placeholder="Search tasks by title, owner, assignee, or TR#..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: '34px', fontSize: '0.86rem', height: '38px' }}
-          />
+            value={selectedStatus}
+            onChange={(e) => handleStatusChange(e.target.value)}
+            style={{
+              fontSize: '0.84rem',
+              height: '38px',
+              width: 'auto',
+              minWidth: '205px',
+              borderColor: selectedStatus !== 'all' ? 'var(--accent-blue)' : undefined,
+              backgroundColor: selectedStatus !== 'all' ? 'rgba(37, 99, 235, 0.08)' : undefined,
+              fontWeight: selectedStatus !== 'all' ? 700 : 500,
+            }}
+          >
+            <option value="all">⚡ All Statuses</option>
+            <option value="done">🟢 Completed / Verified</option>
+            <option value="awaiting_dean">⏳ Submitted (Pending Sign-Off)</option>
+            <option value="in_progress">🟡 In Progress</option>
+            <option value="overdue">🔴 Overdue</option>
+            <option value="pending">⚪ Pending Action</option>
+            <option value="revision_requested">🔄 Revision Requested</option>
+          </select>
+
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setShowMoreFilters((v) => !v)}
+            style={{
+              height: '38px',
+              padding: '0 14px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderColor: activeAdvancedFilterCount > 0 ? 'var(--accent-blue)' : undefined,
+            }}
+          >
+            <Filter size={14} />
+            <span>More Filters{activeAdvancedFilterCount > 0 ? ` (${activeAdvancedFilterCount})` : ''}</span>
+            {showMoreFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+
+          {(selectedCategory !== 'all' || selectedStatus !== 'all' || selectedDept !== 'all' || selectedPriority !== 'all' || selectedOwner !== 'all' || selectedAssignee !== 'all' || search) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCategory('all');
+                handleStatusChange('all');
+                setSelectedDept('all');
+                setSelectedPriority('all');
+                setSelectedOwner('all');
+                setSelectedAssignee('all');
+                setSearch('');
+              }}
+              className="btn btn-secondary btn-sm"
+              style={{ height: '38px', padding: '0 12px', fontSize: '0.8rem', fontWeight: 700 }}
+            >
+              Reset
+            </button>
+          )}
         </div>
+
+        {showMoreFilters && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+
 
         {/* Academic Category Filter (Fall 2026) */}
         <div>
@@ -581,29 +670,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
           </select>
         </div>
 
-        {/* Status Filter */}
-        <div>
-          <select
-            className="form-input"
-            value={selectedStatus}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            style={{
-              fontSize: '0.84rem',
-              height: '38px',
-              borderColor: selectedStatus !== 'all' ? 'var(--accent-blue)' : undefined,
-              backgroundColor: selectedStatus !== 'all' ? 'rgba(37, 99, 235, 0.08)' : undefined,
-              fontWeight: selectedStatus !== 'all' ? 700 : 500,
-            }}
-          >
-            <option value="all">⚡ All Statuses</option>
-            <option value="done">🟢 Completed / Verified</option>
-            <option value="awaiting_dean">⏳ Awaiting Dean Review</option>
-            <option value="in_progress">🟡 In Progress</option>
-            <option value="overdue">🔴 Overdue</option>
-            <option value="pending">⚪ Pending Action</option>
-            <option value="revision_requested">🔄 Needs Revision</option>
-          </select>
-        </div>
+
 
         {/* Department Filter */}
         <div>
@@ -657,23 +724,6 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
         </div>
 
         {/* Reset Filter Button */}
-        {(selectedCategory !== 'all' || selectedStatus !== 'all' || selectedDept !== 'all' || selectedPriority !== 'all' || selectedOwner !== 'all' || selectedAssignee !== 'all' || search) && (
-          <div>
-            <button
-              onClick={() => {
-                setSelectedCategory('all');
-                handleStatusChange('all');
-                setSelectedDept('all');
-                setSelectedPriority('all');
-                setSelectedOwner('all');
-                setSelectedAssignee('all');
-                setSearch('');
-              }}
-              className="btn btn-secondary btn-sm"
-              style={{ width: '100%', height: '38px', fontSize: '0.8rem', fontWeight: 700 }}
-            >
-              Reset Filters
-            </button>
           </div>
         )}
       </div>
@@ -1243,7 +1293,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                           {task.task_owner_name || 'Dean Office'}
                         </div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '1px' }}>
-                          👑 Task Leader
+                          👑 Lead / Coordinator
                         </div>
                       </td>
 
@@ -1277,6 +1327,29 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                               </div>
                             </div>
                           </div>
+
+                          {/* Team Progress Pill for Multi-Member Group Directives */}
+                          {task.group_id && groupProgressMap.get(task.group_id) && groupProgressMap.get(task.group_id)!.total > 1 && (() => {
+                            const gp = groupProgressMap.get(task.group_id!)!;
+                            const allDone = gp.done === gp.total;
+                            return (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                width: 'fit-content',
+                                backgroundColor: allDone ? 'rgba(16, 185, 129, 0.14)' : 'rgba(59, 130, 246, 0.12)',
+                                color: allDone ? '#10b981' : '#60a5fa',
+                                border: allDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
+                              }}>
+                                Team: {gp.done} / {gp.total} Done
+                              </span>
+                            );
+                          })()}
 
                           {/* Multiple Assigned Members Pills */}
                           {(() => {
@@ -1425,9 +1498,9 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '16px', textAlign: 'right' }}>
+                      <td style={{ padding: '16px', textAlign: 'right', position: 'relative' }}>
                         <div
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
@@ -1475,51 +1548,83 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                             </button>
                           )}
 
-                          {/* Leave Task (Member removes themselves) */}
-                          {(currentUser?.id === task.assigned_to_id || isUserAssignedToTask(task, currentUser)) && (
+                          {/* Compact More Actions Menu (Leave / Delete) */}
+                          <div style={{ position: 'relative' }}>
                             <button
                               type="button"
-                              className="btn btn-sm"
-                              onClick={() => handleQuickLeaveTask(task.id, task.title)}
-                              style={{
-                                padding: '4px 7px',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                                borderColor: 'rgba(245, 158, 11, 0.3)',
-                                color: '#f59e0b',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                              }}
-                              title="Remove yourself from this task"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setOpenRowMenuId((prev) => (prev === task.id ? null : task.id))}
+                              style={{ padding: '4px 8px', fontSize: '0.82rem', fontWeight: 800 }}
+                              title="More task actions"
                             >
-                              <UserMinus size={12} />
-                              <span>Leave</span>
+                              ⋯
                             </button>
-                          )}
-
-                          {/* Quick Delete Task for Dean or Task Owner */}
-                          {(isDean || currentUser?.id === task.assigned_to_id || currentUser?.id === task.task_owner_id || currentUser?.full_name === task.task_owner_name) && (
-                            <button
-                              type="button"
-                              className="btn btn-sm"
-                              onClick={() => handleQuickDeleteTask(task.id, task.title)}
-                              style={{
-                                padding: '4px 6px',
-                                fontSize: '0.76rem',
-                                fontWeight: 700,
-                                backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                                borderColor: 'rgba(239, 68, 68, 0.25)',
-                                color: '#ef4444',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                              }}
-                              title="Delete task directly from portal"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          )}
+                            {openRowMenuId === task.id && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  right: 0,
+                                  top: '110%',
+                                  zIndex: 40,
+                                  minWidth: '175px',
+                                  backgroundColor: 'var(--card-bg, #0f172a)',
+                                  border: '1px solid var(--border)',
+                                  borderRadius: '10px',
+                                  padding: '6px',
+                                  boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '4px',
+                                  textAlign: 'left',
+                                }}
+                              >
+                                {(currentUser?.id === task.assigned_to_id || isUserAssignedToTask(task, currentUser)) && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    onClick={() => {
+                                      setOpenRowMenuId(null);
+                                      handleQuickLeaveTask(task.id, task.title);
+                                    }}
+                                    style={{
+                                      justifyContent: 'flex-start',
+                                      gap: '6px',
+                                      fontSize: '0.78rem',
+                                      color: '#f59e0b',
+                                      backgroundColor: 'transparent',
+                                      border: 'none',
+                                      padding: '6px 8px',
+                                    }}
+                                  >
+                                    <UserMinus size={13} />
+                                    <span>Leave Task</span>
+                                  </button>
+                                )}
+                                {(isDean || currentUser?.id === task.assigned_to_id || currentUser?.id === task.task_owner_id || currentUser?.full_name === task.task_owner_name) && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    onClick={() => {
+                                      setOpenRowMenuId(null);
+                                      handleQuickDeleteTask(task.id, task.title);
+                                    }}
+                                    style={{
+                                      justifyContent: 'flex-start',
+                                      gap: '6px',
+                                      fontSize: '0.78rem',
+                                      color: '#ef4444',
+                                      backgroundColor: 'transparent',
+                                      border: 'none',
+                                      padding: '6px 8px',
+                                    }}
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete Task</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
 
                           {/* Dean Approval Quick Action or Approved Status */}
                           {task.dean_acknowledged === 1 ? (
@@ -1539,7 +1644,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                               title="Officially approved by Dean Prof. Dr. Gehan Safwat"
                             >
                               <ShieldCheck size={12} />
-                              <span>Approved</span>
+                              <span>Verified by Dean</span>
                             </span>
                           ) : isDean && task.status === 'done' && onDeanApprove ? (
                             <button

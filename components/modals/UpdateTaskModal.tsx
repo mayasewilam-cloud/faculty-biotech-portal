@@ -230,6 +230,27 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
           </div>
         )}
 
+        {task.status === 'revision_requested' && (
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(245, 158, 11, 0.14)',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            color: '#fbbf24',
+            fontSize: '0.84rem',
+            fontWeight: 600,
+          }}>
+            <RotateCcw size={18} style={{ flexShrink: 0 }} />
+            <span>
+              <strong>Revision Requested:</strong> Please review the Dean&apos;s feedback above, update your notes/deliverables below, and resubmit.
+            </span>
+          </div>
+        )}
+
         {/* Submission Form */}
         <form onSubmit={onSubmit}>
           {/* Editable Due Date for Members */}
@@ -485,7 +506,7 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
               disabled={isSubmittingUpdate}
             >
               <Send size={16} />
-              <span>{isSubmittingUpdate ? 'Submitting...' : 'Submit Update to Dean Office'}</span>
+              <span>{isSubmittingUpdate ? 'Submitting...' : task.status === 'revision_requested' ? 'Resubmit Updated Work' : 'Submit Update to Dean Office'}</span>
             </button>
             </div>
           </div>

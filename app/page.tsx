@@ -479,6 +479,7 @@ export default function DashboardPage() {
       params.delete('taskId');
       const nextUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
       window.history.replaceState({}, '', nextUrl);
+      fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_all_read' }) }).catch(() => {});
     }
   }, [tasks]);
 
@@ -1134,6 +1135,7 @@ export default function DashboardPage() {
   // Create Task (Supports Single Assignee, Multi-Member Teams, Department, or Broadcast)
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCreatingTask) return;
     if (!newTaskTitle || !newTaskTitle.trim()) {
       alert('Please enter or select a task directive title');
       return;
@@ -2840,6 +2842,16 @@ export default function DashboardPage() {
       <TaskInspectionDrawer
         task={selectedTask && !isUpdateTaskOpen ? selectedTask : null}
         onClose={() => setSelectedTask(null)}
+        onEditTask={(t) => {
+          setSelectedTask(t);
+          setUpdateStatus((t.status === 'done' || t.status === 'in_progress' || t.status === 'pending' ? t.status : 'in_progress') as any);
+          setUpdateNotes(t.completion_notes || '');
+          setUpdateUrl(t.attachment_url || '');
+          setUpdateDriveLink(t.drive_link || '');
+          setUpdateActionPlan(t.action_plan || '');
+          setUpdateDeadline(t.deadline ? new Date(t.deadline).toISOString().split('T')[0] : '');
+          setIsUpdateTaskOpen(true);
+        }}
         onDeanAcknowledge={handleDeanAcknowledge}
         onRequestRevision={handleRequestRevision}
         onOpenEmailDispatch={(t) => {
