@@ -956,7 +956,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="desktop-only-table" style={{ overflowX: 'auto' }}>
           <table
             style={{
               width: '100%',
@@ -1955,6 +1955,138 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile-Friendly Card View (<= 768px) */}
+        <div className="mobile-only-cards">
+          {paginatedTasks.length === 0 ? (
+            <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+              No matching directives found.
+            </div>
+          ) : (
+            paginatedTasks.map((task) => {
+              const now = new Date();
+              const overdue = isTaskOverdue(task, now);
+              const awaitingDean = isTaskAwaitingDeanReview(task);
+              const gp = task.group_id ? groupProgressMap.get(task.group_id) : null;
+              const isBusy = busyTaskId === task.id;
+              const statusLabel = task.status === 'done'
+                ? (task.dean_acknowledged === 1 ? 'Verified by Dean' : 'Submitted (Pending Sign-Off)')
+                : overdue
+                  ? 'Overdue'
+                  : (task.status || 'pending').replace('_', ' ').toUpperCase();
+
+              return (
+                <div
+                  key={`mob-${task.id}`}
+                  onClick={() => onSelectTask(task)}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '12px',
+                    border: overdue ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid var(--border)',
+                    backgroundColor: 'var(--bg-inset, rgba(15, 23, 42, 0.45))',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                      TR #{task.tr || task.id} • {(task.priority || 'medium').toUpperCase()}
+                    </span>
+                    <span
+                      className={`badge badge-${task.status === 'done' ? 'done' : overdue ? 'urgent' : task.status === 'in_progress' ? 'in_progress' : 'pending'}`}
+                      style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                    >
+                      {statusLabel}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '0.94rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.35 }}>
+                    {task.title}
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    <span>👤 {task.assignee_name || 'Unassigned'}</span>
+                    <span>•</span>
+                    <span style={{ color: overdue ? '#f87171' : 'var(--text-secondary)', fontWeight: overdue ? 700 : 500 }}>
+                      📅 {formatDateToMDY(task.deadline)}
+                    </span>
+                    {gp && gp.total > 1 && (
+                      <>
+                        <span>•</span>
+                        <span style={{ color: '#60a5fa', fontWeight: 700 }}>
+                          Team: {gp.done}/{gp.total} Done
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <div
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingTop: '6px', borderTop: '1px solid var(--border)' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => onUpdateTask(task)}
+                      style={{ flex: '1 1 auto', fontSize: '0.78rem', fontWeight: 700, justifyContent: 'center' }}
+                    >
+                      Update
+                    </button>
+                    {task.status !== 'done' && (isDean || currentUser?.id === task.assigned_to_id || currentUser?.id === task.task_owner_id || currentUser?.full_name === task.task_owner_name) && (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        disabled={isBusy}
+                        onClick={() => handleQuickMarkDone(task.id)}
+                        style={{
+                          flex: '1 1 auto',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                          borderColor: 'rgba(16, 185, 129, 0.35)',
+                          color: '#10b981',
+                        }}
+                      >
+                        Done
+                      </button>
+                    )}
+                    {isDean && awaitingDean && onDeanApprove && (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => onDeanApprove(task.id, 'Approved by Dean Prof. Dr. Gehan Safwat')}
+                        style={{
+                          flex: '1 1 auto',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          justifyContent: 'center',
+                          backgroundColor: '#10b981',
+                          borderColor: '#10b981',
+                          color: '#ffffff',
+                        }}
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {(currentUser?.id === task.assigned_to_id || isUserAssignedToTask(task, currentUser)) && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleQuickLeaveTask(task.id, task.title)}
+                        style={{ fontSize: '0.75rem', color: '#f59e0b' }}
+                      >
+                        Leave
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Pagination Controls */}

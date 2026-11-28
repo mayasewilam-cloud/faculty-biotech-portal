@@ -1685,3 +1685,69 @@ table.custom-table tr:last-child td, table.table tr:last-child td {
   border: 1px solid #cbd5e1 !important;
 }
 
+
+
+/* ── MOBILE-FIRST RESPONSIVE CARDS, MODALS & NAVIGATION (<= 768px) ── */
+.desktop-only-table {
+  display: block;
+}
+
+.mobile-only-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-only-table {
+    display: none !important;
+  }
+
+  .mobile-only-cards {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .modal-overlay {
+    padding: 10px !important;
+    align-items: flex-end !important;
+  }
+
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    border-radius: 18px 18px 12px 12px !important;
+    padding: 18px !important;
+  }
+
+  .nav-tabs,
+  [role="tablist"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar,
+  [role="tablist"]::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-header {
+    padding: 8px 12px !important;
+  }
+
+  .header-actions {
+    gap: 6px !important;
+  }
+
+  .header-actions .btn {
+    min-height: 36px !important;
+    padding: 5px 9px !important;
+    font-size: 0.74rem !important;
+  }
+}
