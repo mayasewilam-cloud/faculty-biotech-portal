@@ -1719,15 +1719,17 @@ export async function createMeeting(data: Partial<Meeting> & { title: string; cr
     const now = new Date().toISOString();
     const res = await pgExecute(
       `INSERT INTO meetings (
-        title, type, hat_id, hat_name, date, location, chair,
+        title, type, hat_id, hat_name, committee_id, committee_name, date, location, chair,
         rapporteur, objective, attendees, agenda, minutes_body,
         decisions, action_items, status, created_at, created_by_id, created_by_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.title,
         data.type || 'departmental',
         data.hat_id || null,
         data.hat_name || null,
+        (data as any).committee_id || null,
+        (data as any).committee_name || null,
         data.date || now,
         data.location || "Dean's Office (Building A, Room 301)",
         data.chair || data.created_by_name,
@@ -1828,7 +1830,7 @@ export async function updateMeeting(id: number, data: Partial<Meeting>): Promise
     const updated: Meeting = { ...existing, ...data, id };
     await pgExecute(
       `UPDATE meetings SET
-        title = ?, type = ?, hat_id = ?, hat_name = ?, date = ?,
+        title = ?, type = ?, hat_id = ?, hat_name = ?, committee_id = ?, committee_name = ?, date = ?,
         location = ?, chair = ?, rapporteur = ?, objective = ?,
         attendees = ?, agenda = ?, minutes_body = ?, decisions = ?,
         action_items = ?, status = ?
@@ -1838,6 +1840,8 @@ export async function updateMeeting(id: number, data: Partial<Meeting>): Promise
         updated.type,
         updated.hat_id ?? null,
         updated.hat_name ?? null,
+        (updated as any).committee_id ?? null,
+        (updated as any).committee_name ?? null,
         updated.date,
         updated.location,
         updated.chair,

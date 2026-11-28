@@ -2369,7 +2369,7 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* TAB: HATS & SPECIALIZED COMMITTEES */}
+        {/* HATS VIEW REMOVED — REDIRECTS TO COMMITTEES */}
         {activeTab === 'hats' && (
           <HatsView
             hats={hats}
@@ -2931,6 +2931,7 @@ export default function DashboardPage() {
         }}
         currentUser={currentUser}
         hats={hats}
+        committees={committees}
         staff={ALL_FACULTY_STAFF}
         onCreated={handleMeetingCreated}
         onUpdated={handleMeetingUpdated}

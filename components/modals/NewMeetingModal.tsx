@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Hat, Meeting, Task, User } from '@/types';
+import { FacultyCommittee, Hat, Meeting, Task, User } from '@/types';
 import { INSTITUTIONAL_PILLARS } from '@/lib/pillar_catalog';
 import { generateDynamicAgenda } from '@/lib/agendaGenerator';
 import { X, Plus, Trash2, Calendar, MapPin, UserCheck, Shield, FileText, Zap, Award, Layers, Sparkles, Repeat } from 'lucide-react';
@@ -10,7 +10,8 @@ interface NewMeetingModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: User | null;
-  hats: Hat[];
+  hats?: Hat[];
+  committees?: FacultyCommittee[];
   staff: Array<{ id: number; full_name: string; title: string; department: string; email: string }>;
   onCreated: (newMeeting: Meeting, recurringSeries?: Meeting[]) => void;
   onUpdated?: (updatedMeeting: Meeting) => void;
@@ -32,7 +33,8 @@ export const NewMeetingModal: React.FC<NewMeetingModalProps> = ({
   isOpen,
   onClose,
   currentUser,
-  hats,
+  hats = [],
+  committees = [],
   staff,
   onCreated,
   onUpdated,
@@ -43,9 +45,10 @@ export const NewMeetingModal: React.FC<NewMeetingModalProps> = ({
   const [title, setTitle] = useState('');
   const [type, setType] = useState<'pre_presidential' | 'post_presidential' | 'presidential_delegation' | 'faculty_board' | 'committee' | 'departmental' | 'external'>('committee');
   const [hatId, setHatId] = useState<string>('');
+  const [committeeId, setCommitteeId] = useState<string>('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [location, setLocation] = useState('Presidential Boardroom (Building A)');
-  const [chair, setChair] = useState('University President');
+  const [location, setLocation] = useState('Faculty Conference Room (Building A)');
+  const [chair, setChair] = useState(currentUser?.full_name ? `${currentUser.title || ''} ${currentUser.full_name}`.trim() : 'Prof. Dr. Gehan Safwat');
   const [rapporteur, setRapporteur] = useState(currentUser?.full_name ? `${currentUser.title || ''} ${currentUser.full_name}`.trim() : 'Prof. Dr. Gehan Safwat');
   const [objective, setObjective] = useState('');
   const [recurrencePattern, setRecurrencePattern] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
@@ -84,9 +87,10 @@ export const NewMeetingModal: React.FC<NewMeetingModalProps> = ({
       setTitle(editingMeeting.title || '');
       setType((editingMeeting.type as any) || 'committee');
       setHatId(editingMeeting.hat_id ? String(editingMeeting.hat_id) : '');
+      setCommitteeId((editingMeeting as any).committee_id ? String((editingMeeting as any).committee_id) : '');
       setDate(editingMeeting.date ? editingMeeting.date.split('T')[0] : new Date().toISOString().split('T')[0]);
-      setLocation(editingMeeting.location || 'Presidential Boardroom (Building A)');
-      setChair(editingMeeting.chair || 'University President');
+      setLocation(editingMeeting.location || 'Faculty Conference Room (Building A)');
+      setChair(editingMeeting.chair || 'Prof. Dr. Gehan Safwat');
       setRapporteur(editingMeeting.rapporteur || '');
       setObjective(editingMeeting.objective || '');
       setSelectedStaffIds(
@@ -211,7 +215,8 @@ export const NewMeetingModal: React.FC<NewMeetingModalProps> = ({
         };
       });
 
-      // Selected hat
+      // Selected committee (or legacy hat)
+      const selectedCommittee = committeeId ? committees.find(c => c.id === Number(committeeId)) : null;
       const selectedHat = hatId ? hats.find(h => h.id === Number(hatId)) : null;
 
       // Filtered agenda and decisions
@@ -242,6 +247,8 @@ export const NewMeetingModal: React.FC<NewMeetingModalProps> = ({
       const payload = {
         title: title.trim(),
         type,
+        committee_id: selectedCommittee ? selectedCommittee.id : null,
+        committee_name: selectedCommittee ? selectedCommittee.name : null,
         hat_id: selectedHat ? selectedHat.id : null,
         hat_name: selectedHat ? selectedHat.name : null,
         date: new Date(date).toISOString(),
@@ -410,27 +417,38 @@ export const NewMeetingModal: React.FC<NewMeetingModalProps> = ({
                   }
                 }}
               >
-                <option value="pre_presidential">🔵 Pre-Presidential: Internal Preparation Session</option>
-                <option value="post_presidential">🟣 Post-Presidential: Follow-Up & Debrief Session</option>
-                <option value="presidential_delegation">🤝 Presidential Council Delegation</option>
-                <option value="faculty_board">🏛️ Faculty Board & Executive Council</option>
-                <option value="committee">🎩 Committee / Hat Session</option>
-                <option value="departmental">👥 Departmental Coordination</option>
-                <option value="external">🌐 External Delegation / Partner</option>
+                <option value="committee">🏛️ Committee Meeting</option>
+                <option value="faculty_board">🎓 Faculty Board & Executive Council</option>
+                <option value="departmental">👥 Departmental / Team Meeting</option>
+                <option value="presidential_delegation">🤝 Presidential / External Delegation</option>
               </select>
             </div>
 
             <div>
-              <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem' }}>Linked Faculty Hat / Committee (Optional)</label>
+              <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem' }}>Linked Standing Committee (Auto-fills Chair &amp; Members)</label>
               <select
                 className="form-select"
-                value={hatId}
-                onChange={(e) => setHatId(e.target.value)}
+                value={committeeId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCommitteeId(val);
+                  if (val) {
+                    const c = committees.find((x) => x.id === Number(val));
+                    if (c) {
+                      setType('committee');
+                      setChair(`${c.chair_title ? c.chair_title + ' ' : ''}${c.chair_name}`.trim());
+                      setRapporteur(`${c.rapporteur_title ? c.rapporteur_title + ' ' : ''}${c.rapporteur_name}`.trim());
+                      const memberIds = (c.members || []).map((m) => m.user_id).filter(Boolean);
+                      const allIds = Array.from(new Set([c.chair_id, c.rapporteur_id, ...memberIds].filter(Boolean)));
+                      if (allIds.length > 0) setSelectedStaffIds(allIds);
+                    }
+                  }
+                }}
               >
-                <option value="">None (Independent Executive Session)</option>
-                {hats.map(h => (
-                  <option key={h.id} value={h.id}>
-                    {h.icon || '🎩'} {h.name}
+                <option value="">None (General Faculty / Independent Meeting)</option>
+                {committees.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon || '🏛️'} {c.name} ({c.code})
                   </option>
                 ))}
               </select>
