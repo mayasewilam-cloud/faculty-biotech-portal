@@ -22,6 +22,8 @@ interface UpdateTaskModalProps {
   setActionPlan?: (plan: string) => void;
   updateDeadline?: string;
   setUpdateDeadline?: (deadline: string) => void;
+  syncGroupDeadline?: boolean;
+  setSyncGroupDeadline?: (v: boolean) => void;
   onLeaveTask?: (task: Task) => void;
   onRequestDeanMeeting?: (task: Task) => void;
   isSubmittingUpdate: boolean;
@@ -46,6 +48,8 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
   setActionPlan,
   updateDeadline,
   setUpdateDeadline,
+  syncGroupDeadline = true,
+  setSyncGroupDeadline,
   onLeaveTask,
   onRequestDeanMeeting,
   isSubmittingUpdate,
@@ -267,6 +271,16 @@ export const UpdateTaskModal: React.FC<UpdateTaskModalProps> = ({
                 onChange={(e) => setUpdateDeadline(e.target.value)}
                 style={{ width: '100%', maxWidth: '240px' }}
               />
+              {task.group_id && setSyncGroupDeadline && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={syncGroupDeadline}
+                    onChange={(e) => setSyncGroupDeadline(e.target.checked)}
+                  />
+                  <span>Apply due date change to all team members on this directive</span>
+                </label>
+              )}
             </div>
           )}
 

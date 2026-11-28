@@ -25,7 +25,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 6496,
-    "email": "gehan.safwat@msa.edu.eg",
+    "email": "gsafwat@msa.edu.eg",
     "full_name": "Prof. Dr. Gehan Safwat",
     "title": "Prof. Dr.",
     "rank": "Prof. Dr.",
@@ -35,7 +35,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1002,
-    "email": "amr.ageez@msa.edu.eg",
+    "email": "aageez@msa.edu.eg",
     "full_name": "Prof. Dr. Amr Ageez",
     "title": "Prof. Dr.",
     "rank": "Prof. Dr.",
@@ -55,7 +55,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1004,
-    "email": "ashraf.bakkar@msa.edu.eg",
+    "email": "abakkar@msa.edu.eg",
     "full_name": "Prof. Dr. Ashraf Bakkar",
     "title": "Prof. Dr.",
     "rank": "Prof. Dr.",
@@ -65,7 +65,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1005,
-    "email": "ahmed.aref@msa.edu.eg",
+    "email": "aaref@msa.edu.eg",
     "full_name": "Prof. Dr. Ahmed Aref",
     "title": "Prof. Dr.",
     "rank": "Prof. Dr.",
@@ -75,7 +75,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1006,
-    "email": "nabil.ibrahim@msa.edu.eg",
+    "email": "naibrahim@msa.edu.eg",
     "full_name": "Prof. Dr. Nabil Ibrahim",
     "title": "Prof. Dr.",
     "rank": "Prof. Dr.",
@@ -95,7 +95,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1008,
-    "email": "haidan.mostafa@msa.edu.eg",
+    "email": "hamsalem@msa.edu.eg",
     "full_name": "Prof. Dr. Haidan Mostafa",
     "title": "Prof. Dr.",
     "rank": "Prof. Dr.",
@@ -105,7 +105,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1009,
-    "email": "yasmin.abdellatif@msa.edu.eg",
+    "email": "ylatif@msa.edu.eg",
     "full_name": "Prof. Dr. Yasmin Abdel Latif",
     "title": "Prof. Dr.",
     "rank": "Prof. Dr.",
@@ -125,7 +125,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1011,
-    "email": "sami.hamouda@msa.edu.eg",
+    "email": "mhamouda@msa.edu.eg",
     "full_name": "Dr. Sami Hamouda",
     "title": "Dr.",
     "rank": "Dr.",
@@ -135,7 +135,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1012,
-    "email": "hossam.taha@msa.edu.eg",
+    "email": "hotaha@msa.edu.eg",
     "full_name": "Dr. Hossam Taha",
     "title": "Dr.",
     "rank": "Dr.",
@@ -145,7 +145,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1013,
-    "email": "ahmed.refaat@msa.edu.eg",
+    "email": "ahmrefaat@msa.edu.eg",
     "full_name": "Dr. Ahmed Refaat",
     "title": "Dr.",
     "rank": "Dr.",
@@ -155,7 +155,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1014,
-    "email": "amgad.rady@msa.edu.eg",
+    "email": "amrady@msa.edu.eg",
     "full_name": "Dr. Amgad Rady",
     "title": "Dr.",
     "rank": "Dr.",
@@ -165,7 +165,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1015,
-    "email": "mostafa.bakry@msa.edu.eg",
+    "email": "melbakry@msa.edu.eg",
     "full_name": "Dr. Mostafa Bakry",
     "title": "Dr.",
     "rank": "Dr.",
@@ -175,7 +175,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1016,
-    "email": "samer.ismail@msa.edu.eg",
+    "email": "ssmohamed@msa.edu.eg",
     "full_name": "Dr. Samer Ismail",
     "title": "Dr.",
     "rank": "Dr.",
@@ -185,7 +185,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1017,
-    "email": "ingy.elhefny@msa.edu.eg",
+    "email": "imaher@msa.edu.eg",
     "full_name": "Dr. Ingy Elhefny",
     "title": "Dr.",
     "rank": "Dr.",
@@ -195,7 +195,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1018,
-    "email": "ahmed.gomaa@msa.edu.eg",
+    "email": "aigomaa@msa.edu.eg",
     "full_name": "Dr. Ahmed Gomaa",
     "title": "Dr.",
     "rank": "Dr.",
@@ -205,7 +205,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1019,
-    "email": "fayrouz.sayed@msa.edu.eg",
+    "email": "fsayed@msa.edu.eg",
     "full_name": "Dr. Fayrouz Sayed",
     "title": "Dr.",
     "rank": "Dr.",
@@ -215,7 +215,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1020,
-    "email": "karima.nasr@msa.edu.eg",
+    "email": "kamnasreldein@msa.edu.eg",
     "full_name": "Dr. Karima Nasr El Dein",
     "title": "Dr.",
     "rank": "Dr.",
@@ -225,7 +225,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1021,
-    "email": "mohamed.hodhod@msa.edu.eg",
+    "email": "mshodhod@msa.edu.eg",
     "full_name": "Dr. Mohamed Hodhod",
     "title": "Dr.",
     "rank": "Dr.",
@@ -235,7 +235,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1022,
-    "email": "sameh.khalaf@msa.edu.eg",
+    "email": "samhisham@msa.edu.eg",
     "full_name": "Dr. Sameh Khalaf",
     "title": "Dr.",
     "rank": "Dr.",
@@ -245,7 +245,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1023,
-    "email": "rania.momtaz@msa.edu.eg",
+    "email": "raazab@msa.edu.eg",
     "full_name": "Dr. Rania Momtaz",
     "title": "Dr.",
     "rank": "Dr.",
@@ -255,7 +255,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1024,
-    "email": "abdelaziz.nasr@msa.edu.eg",
+    "email": "abnasr@msa.edu.eg",
     "full_name": "Dr. Abdel Aziz Nasr",
     "title": "Dr.",
     "rank": "Dr.",
@@ -265,7 +265,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1025,
-    "email": "mai.ahmed@msa.edu.eg",
+    "email": "mshafei@msa.edu.eg",
     "full_name": "Dr. Mai Ahmed",
     "title": "Dr.",
     "rank": "Dr.",
@@ -275,7 +275,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1026,
-    "email": "yara.ahmed@msa.edu.eg",
+    "email": "ymuhammed@msa.edu.eg",
     "full_name": "Dr. Yara Ahmed",
     "title": "Dr.",
     "rank": "Dr.",
@@ -285,7 +285,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1027,
-    "email": "zahra.saleh@msa.edu.eg",
+    "email": "zsaleh@msa.edu.eg",
     "full_name": "Dr. Zahra Saleh",
     "title": "Dr.",
     "rank": "Dr.",
@@ -295,7 +295,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1028,
-    "email": "shaza.ahmed@msa.edu.eg",
+    "email": "shabib@msa.edu.eg",
     "full_name": "Dr. Shaza Ahmed",
     "title": "Dr.",
     "rank": "Dr.",
@@ -305,7 +305,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1029,
-    "email": "mahmoud.m.soliman@msa.edu.eg",
+    "email": "mmsuleyman@msa.edu.eg",
     "full_name": "Dr. Mahmoud M. Soliman",
     "title": "Dr.",
     "rank": "Dr.",
@@ -315,7 +315,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1030,
-    "email": "ehab.ahmed@msa.edu.eg",
+    "email": "ehahmed@msa.edu.eg",
     "full_name": "Dr. Ehab Ahmed",
     "title": "Dr.",
     "rank": "Dr.",
@@ -325,7 +325,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1031,
-    "email": "marwa.kenawy@msa.edu.eg",
+    "email": "melrefaie@msa.edu.eg",
     "full_name": "Dr. Marwa Kenawy",
     "title": "Dr.",
     "rank": "Dr.",
@@ -335,7 +335,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1032,
-    "email": "nourhan.yasser@msa.edu.eg",
+    "email": "nyasser@msa.edu.eg",
     "full_name": "Dr. Nourhan Yasser",
     "title": "Dr.",
     "rank": "Dr.",
@@ -345,7 +345,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 1033,
-    "email": "gehad.tarek@msa.edu.eg",
+    "email": "gtibrahim@msa.edu.eg",
     "full_name": "Dr. Gehad Tarek",
     "title": "Dr.",
     "rank": "Dr.",
@@ -425,7 +425,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3001,
-    "email": "hoda.allam@msa.edu.eg",
+    "email": "hallam@msa.edu.eg",
     "full_name": "LA. Hoda Allam",
     "title": "LA.",
     "rank": "LA.",
@@ -435,7 +435,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3002,
-    "email": "fouad.ashry@msa.edu.eg",
+    "email": "fashry@msa.edu.eg",
     "full_name": "LA. Fouad Ashry",
     "title": "LA.",
     "rank": "LA.",
@@ -445,7 +445,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3003,
-    "email": "maram.ahmed@msa.edu.eg",
+    "email": "marameldemardash10@gmail.com",
     "full_name": "LA. Maram Ahmed",
     "title": "LA.",
     "rank": "LA.",
@@ -455,7 +455,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3004,
-    "email": "shorouk.mohamed@msa.edu.eg",
+    "email": "shosama@msa.edu.eg",
     "full_name": "LA. Shorouk Mohamed",
     "title": "LA.",
     "rank": "LA.",
@@ -465,7 +465,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3005,
-    "email": "mahmoud.soliman@msa.edu.eg",
+    "email": "makhalaf@msa.edu.eg",
     "full_name": "LA. Mahmoud Soliman",
     "title": "LA.",
     "rank": "LA.",
@@ -475,7 +475,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3006,
-    "email": "nashwa.hamido@msa.edu.eg",
+    "email": "nasmohamed@msa.edu.eg",
     "full_name": "LA. Nashwa Hamido",
     "title": "LA.",
     "rank": "LA.",
@@ -485,7 +485,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3007,
-    "email": "salma.effat@msa.edu.eg",
+    "email": "salahmed@msa.edu.eg",
     "full_name": "LA. Salma Effat",
     "title": "LA.",
     "rank": "LA.",
@@ -495,7 +495,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3008,
-    "email": "youssef.abo.el.kheir@msa.edu.eg",
+    "email": "yaboulkheir@msa.edu.eg",
     "full_name": "LA. Youssef Abo El-Kheir",
     "title": "LA.",
     "rank": "LA.",
@@ -505,7 +505,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3009,
-    "email": "salma.omar@msa.edu.eg",
+    "email": "samahmoud@msa.edu.eg",
     "full_name": "LA. Salma Omar",
     "title": "LA.",
     "rank": "LA.",
@@ -515,7 +515,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3010,
-    "email": "abdelrahman.saad@msa.edu.eg",
+    "email": "abdsaad@msa.edu.eg",
     "full_name": "LA. Abdelrahman Saad",
     "title": "LA.",
     "rank": "LA.",
@@ -525,7 +525,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3011,
-    "email": "nada.el.gazzar@msa.edu.eg",
+    "email": "nhelgazzar@msa.edu.eg",
     "full_name": "LA. Nada El Gazzar",
     "title": "LA.",
     "rank": "LA.",
@@ -535,7 +535,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3012,
-    "email": "mohamed.mansour@msa.edu.eg",
+    "email": "mmshahat@msa.edu.eg",
     "full_name": "LA. Mohamed Mansour",
     "title": "LA.",
     "rank": "LA.",
@@ -545,7 +545,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3013,
-    "email": "nouran.yehia@msa.edu.eg",
+    "email": "nhemida@msa.edu.eg",
     "full_name": "LA. Nouran Yehia",
     "title": "LA.",
     "rank": "LA.",
@@ -555,7 +555,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3014,
-    "email": "hadeer.refaee@msa.edu.eg",
+    "email": "hhrefaei@msa.edu.eg",
     "full_name": "LA. Hadeer Refaee",
     "title": "LA.",
     "rank": "LA.",
@@ -565,7 +565,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3015,
-    "email": "rawan.ali@msa.edu.eg",
+    "email": "rawmagdy@msa.edu.eg",
     "full_name": "LA. Rawan Ali",
     "title": "LA.",
     "rank": "LA.",
@@ -575,7 +575,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3016,
-    "email": "norhan.sabry@msa.edu.eg",
+    "email": "nsbary@msa.edu.eg",
     "full_name": "LA. Norhan Sabry",
     "title": "LA.",
     "rank": "LA.",
@@ -585,7 +585,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3017,
-    "email": "mariam.zaki@msa.edu.eg",
+    "email": "mmzhassan@msa.edu.eg",
     "full_name": "LA. Mariam Zaki",
     "title": "LA.",
     "rank": "LA.",
@@ -595,7 +595,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3018,
-    "email": "malak.haseeb@msa.edu.eg",
+    "email": "mazaki@msa.edu.eg",
     "full_name": "LA. Malak Haseeb",
     "title": "LA.",
     "rank": "LA.",
@@ -605,7 +605,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 3019,
-    "email": "nada.gebril@msa.edu.eg",
+    "email": "ngebriel@msa.edu.eg",
     "full_name": "LA. Nada Gebril",
     "title": "LA.",
     "rank": "LA.",
@@ -615,7 +615,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4020,
-    "email": "sara.badawi@msa.edu.eg",
+    "email": "sbadwai@msa.edu.eg",
     "full_name": "TA. Sara Badawi",
     "title": "TA.",
     "rank": "TA.",
@@ -625,7 +625,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4021,
-    "email": "hesham.fady@msa.edu.eg",
+    "email": "hfady@msa.edu.eg",
     "full_name": "TA. Hesham Fady",
     "title": "TA.",
     "rank": "TA.",
@@ -645,7 +645,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4023,
-    "email": "nour.ahmed@msa.edu.eg",
+    "email": "nouahmed@msa.edu.eg",
     "full_name": "TA. Nour Ahmed",
     "title": "TA.",
     "rank": "TA.",
@@ -655,7 +655,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4024,
-    "email": "nada.sherif@msa.edu.eg",
+    "email": "nshsalaheldien@msa.edu.eg",
     "full_name": "TA. Nada Sherif",
     "title": "TA.",
     "rank": "TA.",
@@ -665,7 +665,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4025,
-    "email": "amr.walid@msa.edu.eg",
+    "email": "awalid@msa.edu.eg",
     "full_name": "TA. Amr Walid",
     "title": "TA.",
     "rank": "TA.",
@@ -675,7 +675,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4026,
-    "email": "aya.el.gohary@msa.edu.eg",
+    "email": "ayaelgohary@msa.edu.eg",
     "full_name": "TA. Aya El Gohary",
     "title": "TA.",
     "rank": "TA.",
@@ -685,7 +685,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4027,
-    "email": "youssef.maged@msa.edu.eg",
+    "email": "yomaged@msa.edu.eg",
     "full_name": "TA. Youssef Maged",
     "title": "TA.",
     "rank": "TA.",
@@ -695,7 +695,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4028,
-    "email": "maya.hany@msa.edu.eg",
+    "email": "mhany@msa.edu.eg",
     "full_name": "TA. Maya Hany",
     "title": "TA.",
     "rank": "TA.",
@@ -705,7 +705,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4029,
-    "email": "mohamed.fahim@msa.edu.eg",
+    "email": "mefahim@msa.edu.eg",
     "full_name": "TA. Mohamed Fahim",
     "title": "TA.",
     "rank": "TA.",
@@ -715,7 +715,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4030,
-    "email": "aya.talaat@msa.edu.eg",
+    "email": "amtalaat@msa.edu.eg",
     "full_name": "TA. Aya Talaat",
     "title": "TA.",
     "rank": "TA.",
@@ -725,7 +725,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4031,
-    "email": "omnia.hefny@msa.edu.eg",
+    "email": "ohefny@msa.edu.eg",
     "full_name": "TA. Omnia Hefny",
     "title": "TA.",
     "rank": "TA.",
@@ -745,7 +745,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4033,
-    "email": "habiba.khaled@msa.edu.eg",
+    "email": "hkmoussa@msa.edu.eg",
     "full_name": "TA. Habiba Khaled",
     "title": "TA.",
     "rank": "TA.",
@@ -755,7 +755,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4034,
-    "email": "zohor.samir@msa.edu.eg",
+    "email": "zsamir@msa.edu.eg",
     "full_name": "TA. Zohor Samir",
     "title": "TA.",
     "rank": "TA.",
@@ -765,7 +765,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4035,
-    "email": "shahd.el.tarabily@msa.edu.eg",
+    "email": "sabdelsalam@msa.edu.eg",
     "full_name": "TA. Shahd El Tarabily",
     "title": "TA.",
     "rank": "TA.",
@@ -785,7 +785,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4037,
-    "email": "norhan.el.hifnawy@msa.edu.eg",
+    "email": "nelhefnawy@msa.edu.eg",
     "full_name": "TA. Norhan El Hifnawy",
     "title": "TA.",
     "rank": "TA.",
@@ -795,7 +795,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4038,
-    "email": "faten.ehab@msa.edu.eg",
+    "email": "fehab@msa.edu.eg",
     "full_name": "TA. Faten Ehab",
     "title": "TA.",
     "rank": "TA.",
@@ -805,7 +805,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4039,
-    "email": "hagar.magdy@msa.edu.eg",
+    "email": "hmmhamed@msa.edu.eg",
     "full_name": "TA. Hagar Magdy",
     "title": "TA.",
     "rank": "TA.",
@@ -815,7 +815,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4040,
-    "email": "sara.ayman@msa.edu.eg",
+    "email": "saayman@msa.edu.eg",
     "full_name": "TA. Sara Ayman",
     "title": "TA.",
     "rank": "TA.",
@@ -835,7 +835,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4042,
-    "email": "hala.moataz@msa.edu.eg",
+    "email": "hmoataz@msa.edu.eg",
     "full_name": "TA. Hala Moataz",
     "title": "TA.",
     "rank": "TA.",
@@ -845,7 +845,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4043,
-    "email": "chahd.wael@msa.edu.eg",
+    "email": "cwael@msa.edu.eg",
     "full_name": "TA. Chahd Wael",
     "title": "TA.",
     "rank": "TA.",
@@ -855,7 +855,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4044,
-    "email": "kenoz.omar@msa.edu.eg",
+    "email": "komar@msa.edu.eg",
     "full_name": "TA. Kenoz Omar",
     "title": "TA.",
     "rank": "TA.",
@@ -875,7 +875,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4046,
-    "email": "rawan.salah@msa.edu.eg",
+    "email": "rasalah@msa.edu.eg",
     "full_name": "TA. Rawan Salah",
     "title": "TA.",
     "rank": "TA.",
@@ -885,7 +885,7 @@ export const ALL_FACULTY_STAFF: PublicStaffMember[] = [
   },
   {
     "id": 4047,
-    "email": "ahmed.tamer@msa.edu.eg",
+    "email": "atamer@msa.edu.eg",
     "full_name": "TA. Ahmed Tamer",
     "title": "TA.",
     "rank": "TA.",

@@ -29,7 +29,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 6496,
-    "email": "gehan.safwat@msa.edu.eg",
+    "email": "gsafwat@msa.edu.eg",
     "password_hash": "$2b$10$qqdk6/XeXxxTh6K4teq6auk2gSfSnLBQzNeyi0D0htZzP4beqOaJi",
     "full_name": "Prof. Dr. Gehan Safwat",
     "title": "Prof. Dr.",
@@ -40,7 +40,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1002,
-    "email": "amr.ageez@msa.edu.eg",
+    "email": "aageez@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Prof. Dr. Amr Ageez",
     "title": "Prof. Dr.",
@@ -62,7 +62,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1004,
-    "email": "ashraf.bakkar@msa.edu.eg",
+    "email": "abakkar@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Prof. Dr. Ashraf Bakkar",
     "title": "Prof. Dr.",
@@ -73,7 +73,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1005,
-    "email": "ahmed.aref@msa.edu.eg",
+    "email": "aaref@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Prof. Dr. Ahmed Aref",
     "title": "Prof. Dr.",
@@ -84,7 +84,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1006,
-    "email": "nabil.ibrahim@msa.edu.eg",
+    "email": "naibrahim@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Prof. Dr. Nabil Ibrahim",
     "title": "Prof. Dr.",
@@ -106,7 +106,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1008,
-    "email": "haidan.mostafa@msa.edu.eg",
+    "email": "hamsalem@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Prof. Dr. Haidan Mostafa",
     "title": "Prof. Dr.",
@@ -117,7 +117,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1009,
-    "email": "yasmin.abdellatif@msa.edu.eg",
+    "email": "ylatif@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Prof. Dr. Yasmin Abdel Latif",
     "title": "Prof. Dr.",
@@ -139,7 +139,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1011,
-    "email": "sami.hamouda@msa.edu.eg",
+    "email": "mhamouda@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Sami Hamouda",
     "title": "Dr.",
@@ -150,7 +150,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1012,
-    "email": "hossam.taha@msa.edu.eg",
+    "email": "hotaha@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Hossam Taha",
     "title": "Dr.",
@@ -161,7 +161,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1013,
-    "email": "ahmed.refaat@msa.edu.eg",
+    "email": "ahmrefaat@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Ahmed Refaat",
     "title": "Dr.",
@@ -172,7 +172,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1014,
-    "email": "amgad.rady@msa.edu.eg",
+    "email": "amrady@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Amgad Rady",
     "title": "Dr.",
@@ -183,7 +183,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1015,
-    "email": "mostafa.bakry@msa.edu.eg",
+    "email": "melbakry@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Mostafa Bakry",
     "title": "Dr.",
@@ -194,7 +194,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1016,
-    "email": "samer.ismail@msa.edu.eg",
+    "email": "ssmohamed@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Samer Ismail",
     "title": "Dr.",
@@ -205,7 +205,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1017,
-    "email": "ingy.elhefny@msa.edu.eg",
+    "email": "imaher@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Ingy Elhefny",
     "title": "Dr.",
@@ -216,7 +216,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1018,
-    "email": "ahmed.gomaa@msa.edu.eg",
+    "email": "aigomaa@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Ahmed Gomaa",
     "title": "Dr.",
@@ -227,7 +227,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1019,
-    "email": "fayrouz.sayed@msa.edu.eg",
+    "email": "fsayed@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Fayrouz Sayed",
     "title": "Dr.",
@@ -238,7 +238,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1020,
-    "email": "karima.nasr@msa.edu.eg",
+    "email": "kamnasreldein@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Karima Nasr El Dein",
     "title": "Dr.",
@@ -249,7 +249,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1021,
-    "email": "mohamed.hodhod@msa.edu.eg",
+    "email": "mshodhod@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Mohamed Hodhod",
     "title": "Dr.",
@@ -260,7 +260,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1022,
-    "email": "sameh.khalaf@msa.edu.eg",
+    "email": "samhisham@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Sameh Khalaf",
     "title": "Dr.",
@@ -271,7 +271,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1023,
-    "email": "rania.momtaz@msa.edu.eg",
+    "email": "raazab@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Rania Momtaz",
     "title": "Dr.",
@@ -282,7 +282,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1024,
-    "email": "abdelaziz.nasr@msa.edu.eg",
+    "email": "abnasr@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Abdel Aziz Nasr",
     "title": "Dr.",
@@ -293,7 +293,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1025,
-    "email": "mai.ahmed@msa.edu.eg",
+    "email": "mshafei@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Mai Ahmed",
     "title": "Dr.",
@@ -304,7 +304,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1026,
-    "email": "yara.ahmed@msa.edu.eg",
+    "email": "ymuhammed@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Yara Ahmed",
     "title": "Dr.",
@@ -315,7 +315,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1027,
-    "email": "zahra.saleh@msa.edu.eg",
+    "email": "zsaleh@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Zahra Saleh",
     "title": "Dr.",
@@ -326,7 +326,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1028,
-    "email": "shaza.ahmed@msa.edu.eg",
+    "email": "shabib@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Shaza Ahmed",
     "title": "Dr.",
@@ -337,7 +337,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1029,
-    "email": "mahmoud.m.soliman@msa.edu.eg",
+    "email": "mmsuleyman@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Mahmoud M. Soliman",
     "title": "Dr.",
@@ -348,7 +348,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1030,
-    "email": "ehab.ahmed@msa.edu.eg",
+    "email": "ehahmed@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Ehab Ahmed",
     "title": "Dr.",
@@ -359,7 +359,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1031,
-    "email": "marwa.kenawy@msa.edu.eg",
+    "email": "melrefaie@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Marwa Kenawy",
     "title": "Dr.",
@@ -370,7 +370,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1032,
-    "email": "nourhan.yasser@msa.edu.eg",
+    "email": "nyasser@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Nourhan Yasser",
     "title": "Dr.",
@@ -381,7 +381,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 1033,
-    "email": "gehad.tarek@msa.edu.eg",
+    "email": "gtibrahim@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "Dr. Gehad Tarek",
     "title": "Dr.",
@@ -469,7 +469,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3001,
-    "email": "hoda.allam@msa.edu.eg",
+    "email": "hallam@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Hoda Allam",
     "title": "LA.",
@@ -480,7 +480,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3002,
-    "email": "fouad.ashry@msa.edu.eg",
+    "email": "fashry@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Fouad Ashry",
     "title": "LA.",
@@ -491,7 +491,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3003,
-    "email": "maram.ahmed@msa.edu.eg",
+    "email": "marameldemardash10@gmail.com",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Maram Ahmed",
     "title": "LA.",
@@ -502,7 +502,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3004,
-    "email": "shorouk.mohamed@msa.edu.eg",
+    "email": "shosama@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Shorouk Mohamed",
     "title": "LA.",
@@ -513,7 +513,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3005,
-    "email": "mahmoud.soliman@msa.edu.eg",
+    "email": "makhalaf@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Mahmoud Soliman",
     "title": "LA.",
@@ -524,7 +524,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3006,
-    "email": "nashwa.hamido@msa.edu.eg",
+    "email": "nasmohamed@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Nashwa Hamido",
     "title": "LA.",
@@ -535,7 +535,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3007,
-    "email": "salma.effat@msa.edu.eg",
+    "email": "salahmed@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Salma Effat",
     "title": "LA.",
@@ -546,7 +546,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3008,
-    "email": "youssef.abo.el.kheir@msa.edu.eg",
+    "email": "yaboulkheir@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Youssef Abo El-Kheir",
     "title": "LA.",
@@ -557,7 +557,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3009,
-    "email": "salma.omar@msa.edu.eg",
+    "email": "samahmoud@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Salma Omar",
     "title": "LA.",
@@ -568,7 +568,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3010,
-    "email": "abdelrahman.saad@msa.edu.eg",
+    "email": "abdsaad@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Abdelrahman Saad",
     "title": "LA.",
@@ -579,7 +579,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3011,
-    "email": "nada.el.gazzar@msa.edu.eg",
+    "email": "nhelgazzar@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Nada El Gazzar",
     "title": "LA.",
@@ -590,7 +590,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3012,
-    "email": "mohamed.mansour@msa.edu.eg",
+    "email": "mmshahat@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Mohamed Mansour",
     "title": "LA.",
@@ -601,7 +601,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3013,
-    "email": "nouran.yehia@msa.edu.eg",
+    "email": "nhemida@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Nouran Yehia",
     "title": "LA.",
@@ -612,7 +612,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3014,
-    "email": "hadeer.refaee@msa.edu.eg",
+    "email": "hhrefaei@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Hadeer Refaee",
     "title": "LA.",
@@ -623,7 +623,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3015,
-    "email": "rawan.ali@msa.edu.eg",
+    "email": "rawmagdy@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Rawan Ali",
     "title": "LA.",
@@ -634,7 +634,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3016,
-    "email": "norhan.sabry@msa.edu.eg",
+    "email": "nsbary@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Norhan Sabry",
     "title": "LA.",
@@ -645,7 +645,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3017,
-    "email": "mariam.zaki@msa.edu.eg",
+    "email": "mmzhassan@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Mariam Zaki",
     "title": "LA.",
@@ -656,7 +656,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3018,
-    "email": "malak.haseeb@msa.edu.eg",
+    "email": "mazaki@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Malak Haseeb",
     "title": "LA.",
@@ -667,7 +667,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 3019,
-    "email": "nada.gebril@msa.edu.eg",
+    "email": "ngebriel@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "LA. Nada Gebril",
     "title": "LA.",
@@ -678,7 +678,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4020,
-    "email": "sara.badawi@msa.edu.eg",
+    "email": "sbadwai@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Sara Badawi",
     "title": "TA.",
@@ -689,7 +689,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4021,
-    "email": "hesham.fady@msa.edu.eg",
+    "email": "hfady@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Hesham Fady",
     "title": "TA.",
@@ -711,7 +711,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4023,
-    "email": "nour.ahmed@msa.edu.eg",
+    "email": "nouahmed@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Nour Ahmed",
     "title": "TA.",
@@ -722,7 +722,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4024,
-    "email": "nada.sherif@msa.edu.eg",
+    "email": "nshsalaheldien@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Nada Sherif",
     "title": "TA.",
@@ -733,7 +733,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4025,
-    "email": "amr.walid@msa.edu.eg",
+    "email": "awalid@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Amr Walid",
     "title": "TA.",
@@ -744,7 +744,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4026,
-    "email": "aya.el.gohary@msa.edu.eg",
+    "email": "ayaelgohary@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Aya El Gohary",
     "title": "TA.",
@@ -755,7 +755,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4027,
-    "email": "youssef.maged@msa.edu.eg",
+    "email": "yomaged@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Youssef Maged",
     "title": "TA.",
@@ -766,7 +766,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4028,
-    "email": "maya.hany@msa.edu.eg",
+    "email": "mhany@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Maya Hany",
     "title": "TA.",
@@ -777,7 +777,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4029,
-    "email": "mohamed.fahim@msa.edu.eg",
+    "email": "mefahim@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Mohamed Fahim",
     "title": "TA.",
@@ -788,7 +788,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4030,
-    "email": "aya.talaat@msa.edu.eg",
+    "email": "amtalaat@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Aya Talaat",
     "title": "TA.",
@@ -799,7 +799,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4031,
-    "email": "omnia.hefny@msa.edu.eg",
+    "email": "ohefny@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Omnia Hefny",
     "title": "TA.",
@@ -821,7 +821,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4033,
-    "email": "habiba.khaled@msa.edu.eg",
+    "email": "hkmoussa@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Habiba Khaled",
     "title": "TA.",
@@ -832,7 +832,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4034,
-    "email": "zohor.samir@msa.edu.eg",
+    "email": "zsamir@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Zohor Samir",
     "title": "TA.",
@@ -843,7 +843,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4035,
-    "email": "shahd.el.tarabily@msa.edu.eg",
+    "email": "sabdelsalam@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Shahd El Tarabily",
     "title": "TA.",
@@ -865,7 +865,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4037,
-    "email": "norhan.el.hifnawy@msa.edu.eg",
+    "email": "nelhefnawy@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Norhan El Hifnawy",
     "title": "TA.",
@@ -876,7 +876,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4038,
-    "email": "faten.ehab@msa.edu.eg",
+    "email": "fehab@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Faten Ehab",
     "title": "TA.",
@@ -887,7 +887,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4039,
-    "email": "hagar.magdy@msa.edu.eg",
+    "email": "hmmhamed@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Hagar Magdy",
     "title": "TA.",
@@ -898,7 +898,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4040,
-    "email": "sara.ayman@msa.edu.eg",
+    "email": "saayman@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Sara Ayman",
     "title": "TA.",
@@ -920,7 +920,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4042,
-    "email": "hala.moataz@msa.edu.eg",
+    "email": "hmoataz@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Hala Moataz",
     "title": "TA.",
@@ -931,7 +931,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4043,
-    "email": "chahd.wael@msa.edu.eg",
+    "email": "cwael@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Chahd Wael",
     "title": "TA.",
@@ -942,7 +942,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4044,
-    "email": "kenoz.omar@msa.edu.eg",
+    "email": "komar@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Kenoz Omar",
     "title": "TA.",
@@ -964,7 +964,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4046,
-    "email": "rawan.salah@msa.edu.eg",
+    "email": "rasalah@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Rawan Salah",
     "title": "TA.",
@@ -975,7 +975,7 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
   },
   {
     "id": 4047,
-    "email": "ahmed.tamer@msa.edu.eg",
+    "email": "atamer@msa.edu.eg",
     "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
     "full_name": "TA. Ahmed Tamer",
     "title": "TA.",
@@ -1115,6 +1115,72 @@ export const INITIAL_STAFF_SEED: StaffSeedItem[] = [
     "department": "Research & Laboratories",
     "phone": "+20 100 000 6008",
     "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=RA.%20Rahma%20Hussain"
+  },
+  {
+    "id": 1034,
+    "email": "raly@msa.edu.eg",
+    "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
+    "full_name": "Prof. Dr. Rania Aly",
+    "title": "Prof. Dr.",
+    "role": "professor",
+    "department": "Academic Staff",
+    "phone": "+20 2 3837-1599",
+    "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=Prof.%20Dr.%20Rania%20Aly"
+  },
+  {
+    "id": 4048,
+    "email": "nofahmy@msa.edu.eg",
+    "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
+    "full_name": "TA. Noura Essam",
+    "title": "TA",
+    "role": "staff",
+    "department": "Academic Staff",
+    "phone": "+20 2 3837-1599",
+    "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=TA.%20Noura%20Essam"
+  },
+  {
+    "id": 4049,
+    "email": "noumaher@msa.edu.eg",
+    "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
+    "full_name": "TA. Nourhan Maher",
+    "title": "TA",
+    "role": "staff",
+    "department": "Academic Staff",
+    "phone": "+20 2 3837-1599",
+    "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=TA.%20Nourhan%20Maher"
+  },
+  {
+    "id": 4050,
+    "email": "obassam@msa.edu.eg",
+    "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
+    "full_name": "TA. Omnia Ahmed",
+    "title": "TA",
+    "role": "staff",
+    "department": "Academic Staff",
+    "phone": "+20 2 3837-1599",
+    "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=TA.%20Omnia%20Ahmed"
+  },
+  {
+    "id": 4051,
+    "email": "mmabdelhameed@msa.edu.eg",
+    "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
+    "full_name": "TA. Menna Abdelhameed",
+    "title": "TA",
+    "role": "staff",
+    "department": "Academic Staff",
+    "phone": "+20 2 3837-1599",
+    "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=TA.%20Menna%20Abdelhameed"
+  },
+  {
+    "id": 4052,
+    "email": "smmahmoud@msa.edu.eg",
+    "password_hash": "$2b$10$rAWgIPVCbpj2zLpZ9M0LNeiujXNLMnq.uWReIBS5mAiixRVXv3NeC",
+    "full_name": "TA. S. Mahmoud",
+    "title": "TA",
+    "role": "staff",
+    "department": "Academic Staff",
+    "phone": "+20 2 3837-1599",
+    "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=TA.%20S.%20Mahmoud"
   }
 ];
 

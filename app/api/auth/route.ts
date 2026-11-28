@@ -56,6 +56,81 @@ function isAdminUser(user: any): boolean {
 }
 
 // Returns true ONLY if the user has explicitly set or changed their own personal password
+const LEGACY_EMAIL_ALIASES: Record<string, string> = {
+  "gehan.safwat@msa.edu.eg": "gsafwat@msa.edu.eg",
+  "amr.ageez@msa.edu.eg": "aageez@msa.edu.eg",
+  "ashraf.bakkar@msa.edu.eg": "abakkar@msa.edu.eg",
+  "ahmed.aref@msa.edu.eg": "aaref@msa.edu.eg",
+  "nabil.ibrahim@msa.edu.eg": "naibrahim@msa.edu.eg",
+  "haidan.mostafa@msa.edu.eg": "hamsalem@msa.edu.eg",
+  "yasmin.abdellatif@msa.edu.eg": "ylatif@msa.edu.eg",
+  "sami.hamouda@msa.edu.eg": "mhamouda@msa.edu.eg",
+  "hossam.taha@msa.edu.eg": "hotaha@msa.edu.eg",
+  "ahmed.refaat@msa.edu.eg": "ahmrefaat@msa.edu.eg",
+  "amgad.rady@msa.edu.eg": "amrady@msa.edu.eg",
+  "mostafa.bakry@msa.edu.eg": "melbakry@msa.edu.eg",
+  "samer.ismail@msa.edu.eg": "ssmohamed@msa.edu.eg",
+  "ingy.elhefny@msa.edu.eg": "imaher@msa.edu.eg",
+  "ahmed.gomaa@msa.edu.eg": "aigomaa@msa.edu.eg",
+  "fayrouz.sayed@msa.edu.eg": "fsayed@msa.edu.eg",
+  "karima.nasr@msa.edu.eg": "kamnasreldein@msa.edu.eg",
+  "mohamed.hodhod@msa.edu.eg": "mshodhod@msa.edu.eg",
+  "sameh.khalaf@msa.edu.eg": "samhisham@msa.edu.eg",
+  "rania.momtaz@msa.edu.eg": "raazab@msa.edu.eg",
+  "abdelaziz.nasr@msa.edu.eg": "abnasr@msa.edu.eg",
+  "mai.ahmed@msa.edu.eg": "mshafei@msa.edu.eg",
+  "yara.ahmed@msa.edu.eg": "ymuhammed@msa.edu.eg",
+  "zahra.saleh@msa.edu.eg": "zsaleh@msa.edu.eg",
+  "shaza.ahmed@msa.edu.eg": "shabib@msa.edu.eg",
+  "mahmoud.m.soliman@msa.edu.eg": "mmsuleyman@msa.edu.eg",
+  "ehab.ahmed@msa.edu.eg": "ehahmed@msa.edu.eg",
+  "marwa.kenawy@msa.edu.eg": "melrefaie@msa.edu.eg",
+  "nourhan.yasser@msa.edu.eg": "nyasser@msa.edu.eg",
+  "gehad.tarek@msa.edu.eg": "gtibrahim@msa.edu.eg",
+  "hoda.allam@msa.edu.eg": "hallam@msa.edu.eg",
+  "fouad.ashry@msa.edu.eg": "fashry@msa.edu.eg",
+  "maram.ahmed@msa.edu.eg": "marameldemardash10@gmail.com",
+  "shorouk.mohamed@msa.edu.eg": "shosama@msa.edu.eg",
+  "mahmoud.soliman@msa.edu.eg": "makhalaf@msa.edu.eg",
+  "nashwa.hamido@msa.edu.eg": "nasmohamed@msa.edu.eg",
+  "salma.effat@msa.edu.eg": "salahmed@msa.edu.eg",
+  "youssef.abo.el.kheir@msa.edu.eg": "yaboulkheir@msa.edu.eg",
+  "salma.omar@msa.edu.eg": "samahmoud@msa.edu.eg",
+  "abdelrahman.saad@msa.edu.eg": "abdsaad@msa.edu.eg",
+  "nada.el.gazzar@msa.edu.eg": "nhelgazzar@msa.edu.eg",
+  "mohamed.mansour@msa.edu.eg": "mmshahat@msa.edu.eg",
+  "nouran.yehia@msa.edu.eg": "nhemida@msa.edu.eg",
+  "hadeer.refaee@msa.edu.eg": "hhrefaei@msa.edu.eg",
+  "rawan.ali@msa.edu.eg": "rawmagdy@msa.edu.eg",
+  "norhan.sabry@msa.edu.eg": "nsbary@msa.edu.eg",
+  "mariam.zaki@msa.edu.eg": "mmzhassan@msa.edu.eg",
+  "malak.haseeb@msa.edu.eg": "mazaki@msa.edu.eg",
+  "nada.gebril@msa.edu.eg": "ngebriel@msa.edu.eg",
+  "sara.badawi@msa.edu.eg": "sbadwai@msa.edu.eg",
+  "hesham.fady@msa.edu.eg": "hfady@msa.edu.eg",
+  "nour.ahmed@msa.edu.eg": "nouahmed@msa.edu.eg",
+  "nada.sherif@msa.edu.eg": "nshsalaheldien@msa.edu.eg",
+  "amr.walid@msa.edu.eg": "awalid@msa.edu.eg",
+  "aya.el.gohary@msa.edu.eg": "ayaelgohary@msa.edu.eg",
+  "youssef.maged@msa.edu.eg": "yomaged@msa.edu.eg",
+  "maya.hany@msa.edu.eg": "mhany@msa.edu.eg",
+  "mohamed.fahim@msa.edu.eg": "mefahim@msa.edu.eg",
+  "aya.talaat@msa.edu.eg": "amtalaat@msa.edu.eg",
+  "omnia.hefny@msa.edu.eg": "ohefny@msa.edu.eg",
+  "habiba.khaled@msa.edu.eg": "hkmoussa@msa.edu.eg",
+  "zohor.samir@msa.edu.eg": "zsamir@msa.edu.eg",
+  "shahd.el.tarabily@msa.edu.eg": "sabdelsalam@msa.edu.eg",
+  "norhan.el.hifnawy@msa.edu.eg": "nelhefnawy@msa.edu.eg",
+  "faten.ehab@msa.edu.eg": "fehab@msa.edu.eg",
+  "hagar.magdy@msa.edu.eg": "hmmhamed@msa.edu.eg",
+  "sara.ayman@msa.edu.eg": "saayman@msa.edu.eg",
+  "hala.moataz@msa.edu.eg": "hmoataz@msa.edu.eg",
+  "chahd.wael@msa.edu.eg": "cwael@msa.edu.eg",
+  "kenoz.omar@msa.edu.eg": "komar@msa.edu.eg",
+  "rawan.salah@msa.edu.eg": "rasalah@msa.edu.eg",
+  "ahmed.tamer@msa.edu.eg": "atamer@msa.edu.eg"
+};
+
 function hasUserChangedPassword(userRecord: any): boolean {
   if (!userRecord) return true;
   if (Number(userRecord.custom_password_set || 0) === 1) return true;
@@ -491,20 +566,22 @@ export async function POST(req: Request) {
       normalizedEmail === 'gehan.safwat@faculty.edu' ||
       normalizedEmail === 'gehansafwat@msa.edu.eg'
     ) {
-      normalizedEmail = 'gehan.safwat@msa.edu.eg';
+      normalizedEmail = 'gsafwat@msa.edu.eg';
     } else if (
       normalizedEmail === 'vicedean' ||
       normalizedEmail === 'vicedean@faculty.edu' ||
       normalizedEmail === 'vicedean@msa.edu.eg' ||
       normalizedEmail === 'amr.ageez@faculty.edu'
     ) {
-      normalizedEmail = 'amr.ageez@msa.edu.eg';
+      normalizedEmail = 'aageez@msa.edu.eg';
     } else if (
       normalizedEmail === 'maya.abdelrazek@msa.edu.eg' ||
       normalizedEmail === 'maya.abdelrazik@msa.edu.eg' ||
       normalizedEmail === 'maabdelrazik@msa.edu.eg'
     ) {
       normalizedEmail = 'maabdelrazek@msa.edu.eg';
+    } else if (LEGACY_EMAIL_ALIASES[normalizedEmail]) {
+      normalizedEmail = LEGACY_EMAIL_ALIASES[normalizedEmail];
     }
 
     const user = await queryFirst('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail]) as any;

@@ -5,6 +5,7 @@ import { Task, Hat, User } from '@/types';
 import { isTaskOverdue, isTaskAwaitingDeanReview, isUserAssignedToTask, parseAssignedMembers } from '@/lib/taskFilters';
 import { FALL_2026_CATEGORIES } from '@/lib/fall_2026_categories';
 import { ManageAssigneesModal } from '@/components/modals/ManageAssigneesModal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import {
   Search,
   Filter,
@@ -91,7 +92,13 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [scopeFilter, setScopeFilter] = useState<'my_tasks' | 'all_tasks'>('all_tasks');
+  const [scopeFilter, setScopeFilter] = useState<'my_tasks' | 'supervising' | 'all_tasks'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('faculty_scope_filter');
+      if (saved === 'my_tasks' || saved === 'supervising' || saved === 'all_tasks') return saved;
+    }
+    return isDean ? 'all_tasks' : 'my_tasks';
+  });
 
   // Leadership always views 'all_tasks' so college directives are never hidden
   useEffect(() => {
@@ -124,7 +131,17 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
     }
   };
 
+  const [busyTaskId, setBusyTaskId] = useState<number | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'leave';
+    taskId: number;
+    title: string;
+  } | null>(null);
+
   const handleQuickMarkDone = async (taskId: number) => {
+    if (busyTaskId === taskId) return;
+    setBusyTaskId(taskId);
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
@@ -132,39 +149,49 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
         body: JSON.stringify({ status: 'done', completion_notes: 'Marked completed directly from portal' }),
       });
       if (res.ok) {
+        alert('Task marked as Done!');
         if (onRefreshTasks) onRefreshTasks();
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setBusyTaskId(null);
     }
   };
 
-  const handleQuickDeleteTask = async (taskId: number, title: string) => {
-    if (!confirm(`Are you sure you want to remove the task "${title}"?`)) return;
+  const handleQuickDeleteTask = (taskId: number, title: string) => {
+    setConfirmState({ isOpen: true, type: 'delete', taskId, title });
+  };
+
+  const handleQuickLeaveTask = (taskId: number, title: string) => {
+    setConfirmState({ isOpen: true, type: 'leave', taskId, title });
+  };
+
+  const executeConfirmedAction = async () => {
+    if (!confirmState) return;
+    const { type, taskId } = confirmState;
+    setBusyTaskId(taskId);
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
-      if (res.ok) {
-        if (onRefreshTasks) onRefreshTasks();
+      if (type === 'delete') {
+        const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete task');
+        alert('Task deleted successfully.');
+      } else {
+        const res = await fetch(`/api/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'leave_task' }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to leave task');
+        alert('You removed yourself from this task.');
       }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleQuickLeaveTask = async (taskId: number, title: string) => {
-    if (!confirm(`Remove yourself from "${title}"?`)) return;
-    try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'leave_task' }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to leave task');
-      alert('You removed yourself from this task.');
+      setConfirmState(null);
       if (onRefreshTasks) onRefreshTasks();
     } catch (err: any) {
-      alert(err.message || 'Failed to leave task');
+      alert(err.message || 'Action failed');
+    } finally {
+      setBusyTaskId(null);
     }
   };
 
@@ -206,6 +233,34 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
   const [pageSize, setPageSize] = useState<number>(25);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [openRowMenuId, setOpenRowMenuId] = useState<number | null>(null);
+  const [groupTeamTasks, setGroupTeamTasks] = useState<boolean>(isDean);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
+
+  // Persist active filters in sessionStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const savedStatus = sessionStorage.getItem('faculty_status_filter');
+      const savedCat = sessionStorage.getItem('faculty_category_filter');
+      const savedPri = sessionStorage.getItem('faculty_priority_filter');
+      const savedSearch = sessionStorage.getItem('faculty_search_filter');
+      if (savedStatus && !statusFilter) setSelectedStatus(savedStatus);
+      if (savedCat) setSelectedCategory(savedCat);
+      if (savedPri) setSelectedPriority(savedPri);
+      if (savedSearch) setSearch(savedSearch);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem('faculty_scope_filter', scopeFilter);
+      sessionStorage.setItem('faculty_status_filter', selectedStatus);
+      sessionStorage.setItem('faculty_category_filter', selectedCategory);
+      sessionStorage.setItem('faculty_priority_filter', selectedPriority);
+      sessionStorage.setItem('faculty_search_filter', search);
+    } catch {}
+  }, [scopeFilter, selectedStatus, selectedCategory, selectedPriority, search]);
 
   // Compute multi-member group progress (X / Y Done)
   const groupProgressMap = useMemo(() => {
@@ -260,9 +315,12 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
   const filteredTasks = useMemo(() => {
     const now = new Date();
     return tasks.filter(t => {
-      // 0. Scope filter: Personal queue vs All college directives
+      // 0. Scope filter: Assigned to Me vs Supervising/Dispatched vs All Faculty
       if (scopeFilter === 'my_tasks' && currentUser) {
         if (!isUserAssignedToTask(t, currentUser)) return false;
+      } else if (scopeFilter === 'supervising' && currentUser) {
+        const isSup = t.assigned_by_id === currentUser.id || t.task_owner_id === currentUser.id;
+        if (!isSup) return false;
       }
 
       // Category Filter (Fall 2026 Categories)
@@ -273,6 +331,11 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
       if (selectedStatus === 'awaiting_dean' && !isTaskAwaitingDeanReview(t)) return false;
       if (selectedStatus === 'in_progress' && t.status !== 'in_progress') return false;
       if (selectedStatus === 'overdue' && !isTaskOverdue(t, now)) return false;
+      if (selectedStatus === 'due_today') {
+        if (t.status === 'done' || !t.deadline) return false;
+        const d = new Date(t.deadline);
+        if (d.toDateString() !== now.toDateString()) return false;
+      }
       if (selectedStatus === 'pending' && (t.status !== 'pending' || isTaskOverdue(t, now))) return false;
       if (selectedStatus === 'revision_requested' && t.status !== 'revision_requested') return false;
 
@@ -333,13 +396,54 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
     setCurrentPage(1);
   }, [filteredTasks.length, scopeFilter, selectedCategory, selectedStatus, selectedDept, selectedPriority, selectedOwner, selectedAssignee, search]);
 
-  const totalPages = pageSize === 0 ? 1 : Math.max(1, Math.ceil(filteredTasks.length / pageSize));
+  // Consolidate parallel group_id tasks into 1 row when Group Team Tasks is enabled (Dean/Supervising)
+  const groupedChildrenMap = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    for (const t of filteredTasks) {
+      if (!t.group_id) continue;
+      const arr = map.get(t.group_id) || [];
+      arr.push(t);
+      map.set(t.group_id, arr);
+    }
+    return map;
+  }, [filteredTasks]);
+
+  const displayTasks = useMemo(() => {
+    if (!groupTeamTasks || scopeFilter === 'my_tasks') return filteredTasks;
+    const seenGroups = new Set<string>();
+    const out: Task[] = [];
+    for (const t of filteredTasks) {
+      if (t.group_id && (groupedChildrenMap.get(t.group_id)?.length || 0) > 1) {
+        if (seenGroups.has(t.group_id)) continue;
+        seenGroups.add(t.group_id);
+      }
+      out.push(t);
+    }
+    return out;
+  }, [filteredTasks, groupTeamTasks, scopeFilter, groupedChildrenMap]);
+
+  const quickChipCounts = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toDateString();
+    let overdue = 0;
+    let dueToday = 0;
+    let awaiting = 0;
+    for (const t of tasks) {
+      if (scopeFilter === 'my_tasks' && currentUser && !isUserAssignedToTask(t, currentUser)) continue;
+      if (isTaskOverdue(t, now)) overdue++;
+      if (t.status !== 'done' && t.deadline && new Date(t.deadline).toDateString() === todayStr) dueToday++;
+      if (isTaskAwaitingDeanReview(t)) awaiting++;
+    }
+    return { overdue, dueToday, awaiting };
+  }, [tasks, scopeFilter, currentUser]);
+
+  const totalPages = pageSize === 0 ? 1 : Math.max(1, Math.ceil(displayTasks.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedTasks = useMemo(() => {
-    if (pageSize === 0) return filteredTasks;
+    if (pageSize === 0) return displayTasks;
     const start = (safePage - 1) * pageSize;
-    return filteredTasks.slice(start, start + pageSize);
-  }, [filteredTasks, safePage, pageSize]);
+    return displayTasks.slice(start, start + pageSize);
+  }, [displayTasks, safePage, pageSize]);
 
   const handleExportSpreadsheet = () => {
     const headers = [
@@ -466,31 +570,45 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
           </div>
         </div>
 
-        {/* Center-Right: Scope Filter Toggle (My Assigned Tasks vs All College Directives) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 1 }}>
+        {/* Center-Right: 3-Way Scope Toggle (Assigned to Me / Supervising / All Faculty) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', zIndex: 1, flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => setScopeFilter('my_tasks')}
             className={`btn btn-sm ${scopeFilter === 'my_tasks' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontWeight: 800, padding: '7px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+            style={{ fontWeight: 800, padding: '7px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem' }}
           >
-            <span>👤 My Assigned Tasks</span>
-            <span style={{ padding: '1px 7px', borderRadius: '999px', fontSize: '0.72rem', backgroundColor: scopeFilter === 'my_tasks' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)', color: scopeFilter === 'my_tasks' ? '#fff' : 'var(--accent-blue)' }}>
+            <span>👤 Assigned to Me</span>
+            <span style={{ padding: '1px 6px', borderRadius: '999px', fontSize: '0.7rem', backgroundColor: scopeFilter === 'my_tasks' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)', color: scopeFilter === 'my_tasks' ? '#fff' : 'var(--accent-blue)' }}>
               {tasks.filter(t => isUserAssignedToTask(t, currentUser)).length}
             </span>
           </button>
 
           <button
             type="button"
-            onClick={() => setScopeFilter('all_tasks')}
-            className={`btn btn-sm ${scopeFilter === 'all_tasks' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontWeight: 800, padding: '7px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+            onClick={() => setScopeFilter('supervising')}
+            className={`btn btn-sm ${scopeFilter === 'supervising' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontWeight: 800, padding: '7px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem' }}
           >
-            <span>🌐 All College Directives</span>
-            <span style={{ padding: '1px 7px', borderRadius: '999px', fontSize: '0.72rem', backgroundColor: scopeFilter === 'all_tasks' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)', color: scopeFilter === 'all_tasks' ? '#fff' : 'var(--accent-blue)' }}>
-              {tasks.length}
+            <span>📋 Supervising</span>
+            <span style={{ padding: '1px 6px', borderRadius: '999px', fontSize: '0.7rem', backgroundColor: scopeFilter === 'supervising' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)', color: scopeFilter === 'supervising' ? '#fff' : 'var(--accent-blue)' }}>
+              {tasks.filter(t => currentUser && (t.assigned_by_id === currentUser.id || t.task_owner_id === currentUser.id)).length}
             </span>
           </button>
+
+          {isDean && (
+            <button
+              type="button"
+              onClick={() => setScopeFilter('all_tasks')}
+              className={`btn btn-sm ${scopeFilter === 'all_tasks' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontWeight: 800, padding: '7px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem' }}
+            >
+              <span>🌐 All Faculty</span>
+              <span style={{ padding: '1px 6px', borderRadius: '999px', fontSize: '0.7rem', backgroundColor: scopeFilter === 'all_tasks' ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.15)', color: scopeFilter === 'all_tasks' ? '#fff' : 'var(--accent-blue)' }}>
+                {tasks.length}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Right: Actions */}
@@ -590,6 +708,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
             <option value="awaiting_dean">⏳ Submitted (Pending Sign-Off)</option>
             <option value="in_progress">🟡 In Progress</option>
             <option value="overdue">🔴 Overdue</option>
+            <option value="due_today">📅 Due Today</option>
             <option value="pending">⚪ Pending Action</option>
             <option value="revision_requested">🔄 Revision Requested</option>
           </select>
@@ -631,6 +750,71 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
             >
               Reset
             </button>
+          )}
+        </div>
+
+        {/* 1-Click Quick Filter Chips + Group Team Tasks Toggle */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => handleStatusChange(selectedStatus === 'overdue' ? 'all' : 'overdue')}
+              className="btn btn-sm"
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                borderRadius: '999px',
+                backgroundColor: selectedStatus === 'overdue' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(239, 68, 68, 0.08)',
+                borderColor: 'rgba(239, 68, 68, 0.35)',
+                color: '#f87171',
+              }}
+            >
+              🔴 Overdue ({quickChipCounts.overdue})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStatusChange(selectedStatus === 'due_today' ? 'all' : 'due_today')}
+              className="btn btn-sm"
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                borderRadius: '999px',
+                backgroundColor: selectedStatus === 'due_today' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.08)',
+                borderColor: 'rgba(59, 130, 246, 0.35)',
+                color: '#60a5fa',
+              }}
+            >
+              📅 Due Today ({quickChipCounts.dueToday})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStatusChange(selectedStatus === 'awaiting_dean' ? 'all' : 'awaiting_dean')}
+              className="btn btn-sm"
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                borderRadius: '999px',
+                backgroundColor: selectedStatus === 'awaiting_dean' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(245, 158, 11, 0.08)',
+                borderColor: 'rgba(245, 158, 11, 0.35)',
+                color: '#fbbf24',
+              }}
+            >
+              ⏳ Pending Sign-Off ({quickChipCounts.awaiting})
+            </button>
+          </div>
+
+          {scopeFilter !== 'my_tasks' && (
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={groupTeamTasks}
+                onChange={(e) => setGroupTeamTasks(e.target.checked)}
+              />
+              <span>Group Multi-Member Directives</span>
+            </label>
           )}
         </div>
 
@@ -1211,8 +1395,8 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                   }
 
                   return (
+                    <React.Fragment key={task.id}>
                     <tr
-                      key={task.id}
                       onClick={() => onSelectTask(task)}
                       style={{
                         cursor: 'pointer',
@@ -1328,26 +1512,55 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                             </div>
                           </div>
 
-                          {/* Team Progress Pill for Multi-Member Group Directives */}
+                          {/* Team Progress Pill & Expandable Team Breakdown */}
                           {task.group_id && groupProgressMap.get(task.group_id) && groupProgressMap.get(task.group_id)!.total > 1 && (() => {
                             const gp = groupProgressMap.get(task.group_id!)!;
                             const allDone = gp.done === gp.total;
+                            const isExpanded = expandedGroupIds.has(task.group_id!);
                             return (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '2px 8px',
-                                borderRadius: '999px',
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                width: 'fit-content',
-                                backgroundColor: allDone ? 'rgba(16, 185, 129, 0.14)' : 'rgba(59, 130, 246, 0.12)',
-                                color: allDone ? '#10b981' : '#60a5fa',
-                                border: allDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
-                              }}>
-                                Team: {gp.done} / {gp.total} Done
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  width: 'fit-content',
+                                  backgroundColor: allDone ? 'rgba(16, 185, 129, 0.14)' : 'rgba(59, 130, 246, 0.12)',
+                                  color: allDone ? '#10b981' : '#60a5fa',
+                                  border: allDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
+                                }}>
+                                  Team: {gp.done} / {gp.total} Done
+                                </span>
+                                {groupTeamTasks && scopeFilter !== 'my_tasks' && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedGroupIds((prev) => {
+                                        const next = new Set(prev);
+                                        if (next.has(task.group_id!)) next.delete(task.group_id!);
+                                        else next.add(task.group_id!);
+                                        return next;
+                                      });
+                                    }}
+                                    style={{
+                                      background: 'transparent',
+                                      border: '1px solid var(--border)',
+                                      borderRadius: '6px',
+                                      padding: '1px 7px',
+                                      fontSize: '0.68rem',
+                                      fontWeight: 700,
+                                      color: 'var(--accent-blue)',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    {isExpanded ? 'Hide Team ▲' : `View Team (${gp.total}) ▼`}
+                                  </button>
+                                )}
+                              </div>
                             );
                           })()}
 
@@ -1529,6 +1742,7 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                             <button
                               type="button"
                               className="btn btn-sm"
+                              disabled={busyTaskId === task.id}
                               onClick={() => handleQuickMarkDone(task.id)}
                               style={{
                                 padding: '4px 8px',
@@ -1690,6 +1904,52 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
                         </div>
                       </td>
                     </tr>
+                    {groupTeamTasks && scopeFilter !== 'my_tasks' && task.group_id && expandedGroupIds.has(task.group_id) && (groupedChildrenMap.get(task.group_id)?.length || 0) > 1 && (
+                      <tr style={{ backgroundColor: 'rgba(15, 23, 42, 0.35)' }}>
+                        <td colSpan={10} style={{ padding: '10px 24px 16px 48px', borderBottom: '1px solid var(--border)' }}>
+                          <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                            Individual Team Member Progress ({groupedChildrenMap.get(task.group_id)!.length} Members):
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '8px' }}>
+                            {groupedChildrenMap.get(task.group_id)!.map((memberTask) => (
+                              <div
+                                key={memberTask.id}
+                                onClick={() => onSelectTask(memberTask)}
+                                style={{
+                                  padding: '8px 12px',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--border)',
+                                  backgroundColor: 'var(--card-bg, rgba(15,23,42,0.5))',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '8px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {memberTask.assignee_name || 'Faculty Member'}
+                                  </div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                    Due: {formatDateToMDY(memberTask.deadline)}
+                                  </div>
+                                </div>
+                                <span
+                                  className={`badge badge-${memberTask.status === 'done' ? 'done' : memberTask.status === 'in_progress' ? 'in_progress' : 'pending'}`}
+                                  style={{ fontSize: '0.68rem', padding: '2px 7px' }}
+                                >
+                                  {memberTask.status === 'done'
+                                    ? (memberTask.dean_acknowledged === 1 ? 'Verified' : 'Submitted')
+                                    : (memberTask.status || 'pending').replace('_', ' ')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                   );
                 })
               )}
@@ -1768,6 +2028,22 @@ export const TasksTableView: React.FC<TasksTableViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* In-App Confirmation Modal (Replaces native browser confirm) */}
+      <ConfirmModal
+        isOpen={Boolean(confirmState?.isOpen)}
+        title={confirmState?.type === 'delete' ? 'Delete Task' : 'Remove Yourself from Task'}
+        message={
+          confirmState?.type === 'delete'
+            ? `Are you sure you want to permanently delete "${confirmState?.title}"?`
+            : `Are you sure you want to remove yourself from "${confirmState?.title}"? Your name will be removed from the assigned team.`
+        }
+        confirmLabel={confirmState?.type === 'delete' ? 'Delete Task' : 'Leave Task'}
+        variant={confirmState?.type === 'delete' ? 'danger' : 'warning'}
+        isBusy={busyTaskId !== null}
+        onConfirm={executeConfirmedAction}
+        onCancel={() => setConfirmState(null)}
+      />
 
       {/* Interactive Modal to Include/Exclude Task Team Members */}
       {manageAssigneesTask && (

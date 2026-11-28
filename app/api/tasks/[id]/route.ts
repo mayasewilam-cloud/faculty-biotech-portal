@@ -151,6 +151,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         taskId
       ]);
 
+      // Sync deadline across all team members in the same group_id if requested
+      if (deadline && existingTask.group_id && body.sync_group_deadline !== false) {
+        await execute(
+          'UPDATE tasks SET deadline = ?, due_time = COALESCE(?, due_time), updated_at = CURRENT_TIMESTAMP WHERE group_id = ?',
+          [deadline, due_time !== undefined ? due_time : null, existingTask.group_id]
+        );
+      }
+
       // Audit Log Entry
       const deadlineChanged = Boolean(deadline && deadline !== existingTask.deadline);
       const actionType = deadlineChanged && !status ? 'DEADLINE_UPDATED' : (nextStatus === 'done' ? 'TASK_COMPLETED' : 'TASK_STATUS_UPDATED');
@@ -308,6 +316,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         SET ${updates.join(', ')}
         WHERE id = ?
       `, updateParams);
+
+      if (deadline !== undefined && existingTask.group_id && body.sync_group_deadline !== false) {
+        await execute(
+          'UPDATE tasks SET deadline = ?, updated_at = CURRENT_TIMESTAMP WHERE group_id = ?',
+          [deadline, existingTask.group_id]
+        );
+      }
 
       // Audit Log for Dean action
       let actionType = 'TASK_UPDATED';

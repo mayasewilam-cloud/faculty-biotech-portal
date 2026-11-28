@@ -89,6 +89,7 @@ import { TasksTableView } from '@/components/views/TasksTableView';
 import { CreateSubmissionRequestModal } from '@/components/modals/CreateSubmissionRequestModal';
 import { ConfidentialSubmissionsDrawer } from '@/components/modals/ConfidentialSubmissionsDrawer';
 import { TaskImportModal } from '@/components/modals/TaskImportModal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -288,6 +289,8 @@ export default function DashboardPage() {
   const [updateDriveLink, setUpdateDriveLink] = useState('');
   const [updateActionPlan, setUpdateActionPlan] = useState('');
   const [updateDeadline, setUpdateDeadline] = useState('');
+  const [syncGroupDeadline, setSyncGroupDeadline] = useState(true);
+  const [leaveConfirmTask, setLeaveConfirmTask] = useState<Task | null>(null);
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
 
   // Task Dispatch Form State (Supports Single, Hat Group, Multi-Selected, Department-wide, or Broadcast)
@@ -1494,6 +1497,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
             status: updateStatus,
             deadline: updateDeadline ? new Date(updateDeadline).toISOString() : undefined,
+            sync_group_deadline: syncGroupDeadline,
             completion_notes: updateNotes,
             completion_url: updateUrl,
             drive_link: updateDriveLink || null,
@@ -2809,24 +2813,9 @@ export default function DashboardPage() {
           setActionPlan={setUpdateActionPlan}
           updateDeadline={updateDeadline}
           setUpdateDeadline={setUpdateDeadline}
-          onLeaveTask={async (t) => {
-            if (!confirm(`Remove yourself from "${t.title}"?`)) return;
-            try {
-              const res = await fetch(`/api/tasks/${t.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'leave_task' }),
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.error || 'Failed to leave task');
-              setIsUpdateTaskOpen(false);
-              setSelectedTask(null);
-              alert('You removed yourself from this task.');
-              fetchTasks();
-            } catch (err: any) {
-              alert(err.message || 'Failed to leave task');
-            }
-          }}
+          syncGroupDeadline={syncGroupDeadline}
+          setSyncGroupDeadline={setSyncGroupDeadline}
+          onLeaveTask={(t) => setLeaveConfirmTask(t)}
           onRequestDeanMeeting={() => {
             if (selectedTask) {
               setIsUpdateTaskOpen(false);
@@ -3086,6 +3075,34 @@ export default function DashboardPage() {
       />
 
       {/* MODAL: CHANGE PERSONAL PASSWORD */}
+      <ConfirmModal
+        isOpen={Boolean(leaveConfirmTask)}
+        title="Remove Yourself from Task"
+        message={`Are you sure you want to remove yourself from "${leaveConfirmTask?.title}"?`}
+        confirmLabel="Leave Task"
+        variant="warning"
+        onConfirm={async () => {
+          if (!leaveConfirmTask) return;
+          try {
+            const res = await fetch(`/api/tasks/${leaveConfirmTask.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'leave_task' }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to leave task');
+            setLeaveConfirmTask(null);
+            setIsUpdateTaskOpen(false);
+            setSelectedTask(null);
+            alert('You removed yourself from this task.');
+            fetchTasks();
+          } catch (err: any) {
+            alert(err.message || 'Failed to leave task');
+          }
+        }}
+        onCancel={() => setLeaveConfirmTask(null)}
+      />
+
       {isChangePasswordOpen && (
         <div className="modal-overlay" style={{
           position: 'fixed',
