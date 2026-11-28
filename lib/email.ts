@@ -9,7 +9,13 @@ export interface SmtpConfig {
   timeoutMs: number;
 }
 
+export function isResendConfigured(): boolean {
+  const key = process.env.RESEND_API_KEY || (globalThis as any).RESEND_API_KEY;
+  return typeof key === 'string' && key.trim().length > 0;
+}
+
 export function isSmtpConfigured(): boolean {
+  if (isResendConfigured()) return true;
   const host = process.env.SMTP_HOST || (globalThis as any).SMTP_HOST;
   return typeof host === 'string' && host.trim().length > 0;
 }
@@ -66,6 +72,9 @@ export function createTransporter() {
 }
 
 export async function verifySmtpConnection(): Promise<{ available: boolean; error?: string }> {
+  if (isResendConfigured()) {
+    return { available: true };
+  }
   const transporter = createTransporter();
   if (!transporter) {
     return { available: false, error: 'SMTP host is not configured.' };
@@ -111,11 +120,58 @@ export async function sendEmail(options: SendMailOptions): Promise<SendMailResul
     return { success: false, error: 'Invalid recipient email address format.' };
   }
 
+  const plainText = text || html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // 1. Prefer Resend HTTP API if RESEND_API_KEY is configured (ideal for Vercel Serverless, 3,000 free/mo)
+  const resendKey = process.env.RESEND_API_KEY || (globalThis as any).RESEND_API_KEY;
+  if (typeof resendKey === 'string' && resendKey.trim().length > 0) {
+    const resendFrom =
+      from ||
+      process.env.RESEND_FROM ||
+      process.env.SMTP_FROM ||
+      'MSA Faculty of Biotechnology <onboarding@resend.dev>';
+    try {
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendKey.trim()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: [to.trim()],
+          subject,
+          html,
+          text: plainText,
+        }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        return {
+          success: false,
+          error: data?.message || `Resend API error (${resp.status})`,
+          code: 'RESEND_SEND_FAILED',
+        };
+      }
+      return {
+        success: true,
+        messageId: data?.id || 'resend-ok',
+        response: JSON.stringify(data),
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || 'Resend API transmission error',
+        code: 'RESEND_SEND_FAILED',
+      };
+    }
+  }
+
   const transporter = createTransporter();
   if (!transporter) {
     return {
       success: false,
-      error: 'SMTP transport is unconfigured on server. Outbound email cannot be dispatched.',
+      error: 'Email transport is unconfigured. Set RESEND_API_KEY or SMTP_HOST.',
       code: 'SMTP_UNCONFIGURED',
     };
   }
@@ -124,8 +180,6 @@ export async function sendEmail(options: SendMailOptions): Promise<SendMailResul
   const mailFrom = from || config?.from || 'Faculty of Biotechnology MSA <no-reply@msa.edu.eg>';
 
   try {
-    const plainText = text || html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-
     const info = await transporter.sendMail({
       from: mailFrom,
       to,

@@ -367,8 +367,8 @@ export default function LoginPage() {
                 >
                   <option value="">-- Choose your name from directory ({ALL_FACULTY_STAFF.length} staff) --</option>
                   <optgroup label="👑 Executive Leadership & Deanship">
-                    <option value="gehan.safwat@msa.edu.eg">👑 Prof. Dr. Gehan Safwat — Dean of Faculty (Super Admin)</option>
-                    <option value="amr.ageez@msa.edu.eg">⭐ Prof. Dr. Amr Ageez — Vice Dean for Academic Affairs (Super Admin)</option>
+                    <option value="gsafwat@msa.edu.eg">👑 Prof. Dr. Gehan Safwat — Dean of Faculty (Super Admin)</option>
+                    <option value="aageez@msa.edu.eg">⭐ Prof. Dr. Amr Ageez — Vice Dean for Academic Affairs (Super Admin)</option>
                     <option value="admin@faculty.edu">Admin — Central University Governance</option>
                   </optgroup>
                   <optgroup label="🏛️ Professors & Associate Professors">
@@ -518,8 +518,8 @@ export default function LoginPage() {
                 >
                   <option value="">-- Choose your name from directory ({ALL_FACULTY_STAFF.length} staff) --</option>
                   <optgroup label="👑 Executive Leadership & Deanship">
-                    <option value="gehan.safwat@msa.edu.eg">👑 Prof. Dr. Gehan Safwat — Dean of Faculty (Super Admin)</option>
-                    <option value="amr.ageez@msa.edu.eg">⭐ Prof. Dr. Amr Ageez — Vice Dean for Academic Affairs (Super Admin)</option>
+                    <option value="gsafwat@msa.edu.eg">👑 Prof. Dr. Gehan Safwat — Dean of Faculty (Super Admin)</option>
+                    <option value="aageez@msa.edu.eg">⭐ Prof. Dr. Amr Ageez — Vice Dean for Academic Affairs (Super Admin)</option>
                     <option value="admin@faculty.edu">Admin — Central University Governance</option>
                   </optgroup>
                   <optgroup label="🏛️ Professors & Associate Professors">

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { queryFirst, execute, ensureAllStaffExist } from '@/lib/db';
 import { createSession, deleteSession, getCurrentUser, getImpersonationInfo, invalidateAllUserSessions } from '@/lib/auth';
 import { INITIAL_STAFF_SEED } from '@/lib/staff_seed';
+import { isSmtpConfigured, sendEmail } from '@/lib/email';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 
@@ -321,12 +322,49 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Valid email address is required' }, { status: 400 });
       }
 
-      // Email transport is unconfigured; return safe response without user enumeration or token exposure
-      return NextResponse.json({ 
-        success: false, 
-        configured: false, 
-        error: "Automated email verification is currently unconfigured. Please contact the Faculty Administrator or Dean's office for an administrative account recovery token." 
-      }, { status: 503 });
+      if (!isSmtpConfigured()) {
+        return NextResponse.json({ 
+          success: false, 
+          configured: false, 
+          error: "Automated email verification is currently unconfigured. Please contact the Faculty Administrator or Dean's office for an administrative account recovery token." 
+        }, { status: 503 });
+      }
+
+      let lookupEmail = email.toLowerCase().trim();
+      if (LEGACY_EMAIL_ALIASES[lookupEmail]) {
+        lookupEmail = LEGACY_EMAIL_ALIASES[lookupEmail];
+      }
+
+      const targetUser = await queryFirst('SELECT * FROM users WHERE LOWER(email) = ?', [lookupEmail]) as any;
+      if (targetUser) {
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+        const tokenId = crypto.randomUUID();
+
+        await execute(
+          'INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, created_by_id, purpose) VALUES (?, ?, ?, ?, ?, ?)',
+          [tokenId, targetUser.id, tokenHash, expiresAt, targetUser.id, 'recovery']
+        );
+
+        const origin = req.headers.get('origin') || 'https://faculty-biotech-portal-m-688f.vercel.app';
+        const resetUrl = `${origin}/login?reset_token=${rawToken}&email=${encodeURIComponent(targetUser.email)}`;
+        await sendEmail({
+          to: targetUser.email,
+          subject: 'MSA Faculty of Biotechnology Portal — Password Reset',
+          html: `<p>Dear ${targetUser.title || ''} ${targetUser.full_name},</p>
+                 <p>You requested a password reset for the Faculty of Biotechnology Portal.</p>
+                 <p><a href="${resetUrl}" style="display:inline-block;padding:10px 18px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">Reset Your Password</a></p>
+                 <p>Or copy this single-use token: <code>${rawToken}</code></p>
+                 <p>This link expires in 1 hour.</p>`,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        configured: true,
+        message: 'If an account matches this email, a password reset link has been sent to your inbox.',
+      });
     }
 
     // ─────────────────────────────────────────────────────────────
