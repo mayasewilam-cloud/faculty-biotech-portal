@@ -2799,7 +2799,10 @@ export default function DashboardPage() {
       <UpdateTaskModal
           isOpen={isUpdateTaskOpen && !!selectedTask}
           task={selectedTask}
-          onClose={() => setIsUpdateTaskOpen(false)}
+          onClose={() => {
+            setIsUpdateTaskOpen(false);
+            setSelectedTask(null);
+          }}
           onSubmit={handleSubmitTaskUpdate}
           updateStatus={updateStatus}
           setUpdateStatus={setUpdateStatus}
@@ -2818,8 +2821,10 @@ export default function DashboardPage() {
           onLeaveTask={(t) => setLeaveConfirmTask(t)}
           onRequestDeanMeeting={() => {
             if (selectedTask) {
+              const target = selectedTask;
               setIsUpdateTaskOpen(false);
-              handleTaskMeetingAction(selectedTask);
+              setSelectedTask(null);
+              handleTaskMeetingAction(target);
             }
           }}
           isSubmittingUpdate={isSubmittingUpdate}
